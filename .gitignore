@@ -24,3 +24,8 @@ build-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Codebuddy
+.codebuddy
+_bmad
+.claude
