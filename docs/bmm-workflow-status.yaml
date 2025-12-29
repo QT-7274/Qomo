@@ -1,0 +1,45 @@
+# BMM Workflow Status
+#
+# This file tracks progress through BMM methodology Analysis, Planning, and Solutioning phases.
+# Implementation phase is tracked separately in sprint-status.yaml
+#
+# STATUS DEFINITIONS:
+# ==================
+# Initial Status (before completion):
+#   - required: Must be completed to progress
+#   - optional: Can be completed but not required
+#   - recommended: Strongly suggested but not required
+#   - conditional: Required only if certain conditions met (e.g., if_has_ui)
+#
+# Completion Status:
+#   - {file-path}: File created/found (e.g., "docs/prd.md")
+#   - skipped: Optional/conditional workflow that was skipped
+
+generated: "2025-12-27"
+updated: "2025-12-28"
+project: "Qomo"
+project_type: "web-app"
+project_level: "intermediate"
+selected_track: "method"
+field_type: "greenfield"
+workflow_path: "_bmad/bmm/workflows/workflow-status/paths/method-greenfield.yaml"
+
+# workflow_status is an ordered list (YAML mapping order matters):
+# the first item that is not a file path and not 'skipped' becomes the NEXT workflow.
+workflow_status:
+  # Discovery (Optional) — you chose greenfield; BMad Master defaulted to include Product Brief
+  product-brief: docs/analysis/product-brief-Qomo-2025-12-27.md
+
+  # Planning
+  prd: docs/prd.md
+  create-ux-design: conditional
+
+  # Solutioning
+  create-architecture: required
+  create-epics-and-stories: required
+  test-design: recommended
+  validate-architecture: optional
+  implementation-readiness: required
+
+  # Implementation
+  sprint-planning: required
