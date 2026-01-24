@@ -1,0 +1,142 @@
+version: 1
+
+environment:
+  apiPort: 5173
+  shell: "bash"
+
+# Note: conventions.naming is for documentation only (not enforced by detectors)
+conventions:
+  naming:
+    - filePattern: "*.ts"
+      className: "PascalCase"
+      functionName: "camelCase"
+      constantName: "SCREAMING_SNAKE_CASE"
+    - filePattern: "*.tsx"
+      className: "PascalCase"
+      functionName: "camelCase"
+      constantName: "SCREAMING_SNAKE_CASE"
+
+deprecatedPatterns: []
+
+Detectors:
+  environmentReinforcement:
+    enabled: true
+    checkPaths: true
+    checkCommands: true
+
+  directoryReinforcement:
+    enabled: true
+    rules:
+      # Components / Hooks / Types
+      - pattern: "**/*Component.tsx"
+        expectedDir: "src/components"
+        reason: "Reusable React components should be in src/components/"
+
+      - pattern: "**/*.component.tsx"
+        expectedDir: "src/components"
+        reason: "Reusable React components should be in src/components/"
+
+      - pattern: "**/use*.ts"
+        expectedDir: "src/hooks"
+        reason: "Custom hooks should be in src/hooks/"
+
+      - pattern: "**/*.types.ts"
+        expectedDir: "src/types"
+        reason: "Shared type definitions should be in src/types/"
+
+      # Establish conventions for future growth.
+      - pattern: "**/*Service.ts"
+        expectedDir: "src/services"
+        reason: "Service files should be in src/services/"
+
+      - pattern: "**/*Service.tsx"
+        expectedDir: "src/services"
+        reason: "Service files should be in src/services/"
+
+      - pattern: "**/*Util*.ts"
+        expectedDir: "src/utils"
+        reason: "Utility files should be in src/utils/"
+
+      - pattern: "**/*Util*.tsx"
+        expectedDir: "src/utils"
+        reason: "Utility files should be in src/utils/"
+
+      - pattern: "**/*Helper*.ts"
+        expectedDir: "src/utils"
+        reason: "Helper files should be in src/utils/"
+
+      - pattern: "**/*Helper*.tsx"
+        expectedDir: "src/utils"
+        reason: "Helper files should be in src/utils/"
+
+      # Tests (repo currently has none) — use a dedicated root-level tests folder.
+      - pattern: "**/*.test.ts"
+        expectedDir: "tests"
+        reason: "Test files should be in tests/"
+
+      - pattern: "**/*.spec.ts"
+        expectedDir: "tests"
+        reason: "Test files should be in tests/"
+
+      - pattern: "**/*.test.tsx"
+        expectedDir: "tests"
+        reason: "Test files should be in tests/"
+
+      - pattern: "**/*.spec.tsx"
+        expectedDir: "tests"
+        reason: "Test files should be in tests/"
+
+  flatArchitecture:
+    enabled: true
+    targets:
+      # Workspace root: allow more config/tooling files (this is normal for JS/TS projects).
+      - path: "."
+        maxRootFiles: 30
+        minSubdirs: 3
+        excludePatterns:
+          - ".git/**"
+          - "node_modules/**"
+          - "dist/**"
+          - ".memory-layer/**"
+
+      # Source directory should remain structured.
+      - path: "src"
+        maxRootFiles: 10
+        minSubdirs: 1
+        excludePatterns:
+          - "dist/**"
+          - "node_modules/**"
+
+  configChaos:
+    enabled: true
+    requiredConfigs:
+      - ".gitignore"
+      - "package.json"
+      - "tsconfig.json"
+      - "vite.config.ts"
+      - "LICENSE"
+      - ".env.example"
+      - "Dockerfile"
+      - "docker-compose.yml"
+      - ".github/workflows/ci.yml"
+
+  tempFiles:
+    enabled: true
+    patterns:
+      - "**/*.tmp"
+      - "**/temp_*"
+      - "**/scratch_*"
+      - "**/*.bak"
+      - "**/debug_*"
+
+  fileProliferation:
+    enabled: true
+    threshold: 3
+
+  overcrowdedFolders:
+    enabled: true
+    targets:
+      - path: "src"
+        maxFiles: 30
+      - path: "src/utils"
+        maxFiles: 20

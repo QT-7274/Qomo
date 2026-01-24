@@ -30,3 +30,11 @@ build-ssr
 _bmad
 .claude
 .shared
+
+
+# Mault Memory Layer (auto)
+.memory-layer/
+.memory-layer/cache/
+.memory-layer/logs/
+.memory-layer/reports/
+.memory-layer/archive/
