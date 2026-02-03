@@ -1,0 +1,1320 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Qomo - UX Design Directions</title>
+  <style>
+    /*
+      Qomo Design Directions Showcase
+      - Focus: Direction exploration (Notion-minimal × IDE-workbench)
+      - This is a visualizer for choosing a direction, not production UI.
+    */
+
+    :root {
+      /* Brand tokens (light) - from Step 6 */
+      --primary-100: #005B99;
+      --primary-200: #4e88ca;
+      --primary-300: #b7e9ff;
+      --accent-100: #FFD700;
+      --accent-200: #e9aa2b;
+      --text-100: #333333;
+      --text-200: #5c5c5c;
+      --bg-100: #F5F5F5;
+      --bg-200: #ebebeb;
+      --bg-300: #c2c2c2;
+
+      /* Semantic tokens (light) */
+      --background: var(--bg-100);
+      --foreground: var(--text-100);
+      --muted: var(--bg-200);
+      --muted-foreground: var(--text-200);
+      --card: #ffffff;
+      --card-foreground: var(--text-100);
+      --popover: #ffffff;
+      --popover-foreground: var(--text-100);
+      --border: #d6d6d6;
+      --input: #d6d6d6;
+      --primary: var(--primary-100);
+      --primary-foreground: #ffffff;
+      --ring: var(--primary-200);
+      --accent: var(--accent-100);
+      --accent-foreground: #111111;
+
+      /* Layout & type - Step 8 */
+      --radius: 10px;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.06);
+      --shadow-md: 0 8px 24px rgba(0,0,0,.12);
+
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 24px;
+      --space-6: 32px;
+
+      --sidebar-w: 288px;
+      --content-max: 1040px;
+
+      --fs-body: 16px;
+      --lh-body: 24px;
+      --fs-sm: 14px;
+      --lh-sm: 20px;
+      --fs-h1: 24px;
+      --lh-h1: 32px;
+      --fs-h2: 20px;
+      --lh-h2: 28px;
+
+      --row-comfy: 44px;
+      --row-compact: 36px;
+
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+
+    [data-theme="dark"] {
+      /* Brand tokens (dark) - from Step 6 */
+      --primary-100: #2563eb;
+      --primary-200: #598EF3;
+      --primary-300: #D3E6FE;
+      --accent-100: #d946ef;
+      --accent-200: #fae8ff;
+      --text-100: #cbd5e1;
+      --text-200: #94a3b8;
+      --bg-100: #1e293b;
+      --bg-200: #334155;
+      --bg-300: #475569;
+
+      /* Semantic tokens (dark) */
+      --background: var(--bg-100);
+      --foreground: var(--text-100);
+      --muted: var(--bg-200);
+      --muted-foreground: var(--text-200);
+      --card: rgba(255,255,255,.04);
+      --card-foreground: var(--text-100);
+      --popover: rgba(255,255,255,.06);
+      --popover-foreground: var(--text-100);
+      --border: var(--bg-300);
+      --input: var(--bg-300);
+      --primary: var(--primary-100);
+      --primary-foreground: #ffffff;
+      --ring: var(--primary-200);
+      --accent: var(--accent-100);
+      --accent-foreground: #0b1220;
+
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.28);
+      --shadow-md: 0 16px 40px rgba(0,0,0,.45);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--sans);
+      font-size: var(--fs-body);
+      line-height: var(--lh-body);
+      background: var(--background);
+      color: var(--foreground);
+    }
+
+    a { color: inherit; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: saturate(120%) blur(10px);
+      background: color-mix(in srgb, var(--background) 82%, transparent);
+      border-bottom: 1px solid var(--border);
+    }
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      padding: var(--space-3) var(--space-4);
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--muted) 70%, transparent);
+      color: var(--muted-foreground);
+      font-size: 12px;
+      line-height: 18px;
+      white-space: nowrap;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--foreground);
+      border-radius: calc(var(--radius) - 2px);
+      padding: 8px 12px;
+      font-size: 14px;
+      line-height: 20px;
+      cursor: pointer;
+    }
+    .btn:hover { border-color: color-mix(in srgb, var(--border) 70%, var(--primary)); }
+
+    .btn.primary {
+      background: var(--primary);
+      color: var(--primary-foreground);
+      border-color: color-mix(in srgb, var(--primary) 70%, var(--border));
+    }
+
+    .seg {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+      background: var(--card);
+    }
+    .seg button {
+      border: 0;
+      background: transparent;
+      padding: 8px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--muted-foreground);
+    }
+    .seg button[aria-pressed="true"] {
+      background: color-mix(in srgb, var(--primary) 10%, var(--card));
+      color: var(--foreground);
+    }
+
+    .layout {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--space-4);
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: var(--space-4);
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--card);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: var(--space-3) var(--space-4);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+    }
+
+    .panel-header h2 {
+      margin: 0;
+      font-size: 14px;
+      line-height: 20px;
+      font-weight: 600;
+    }
+
+    .list {
+      padding: var(--space-2);
+      display: grid;
+      gap: 8px;
+    }
+
+    .option {
+      display: grid;
+      gap: 6px;
+      padding: var(--space-3);
+      border: 1px solid var(--border);
+      border-radius: calc(var(--radius) - 2px);
+      background: color-mix(in srgb, var(--card) 92%, var(--muted));
+      cursor: pointer;
+    }
+    .option:hover { border-color: color-mix(in srgb, var(--border) 70%, var(--primary)); }
+    .option[aria-selected="true"] {
+      border-color: color-mix(in srgb, var(--primary) 70%, var(--border));
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 30%, transparent);
+    }
+    .option .title { font-weight: 600; }
+    .option .meta { color: var(--muted-foreground); font-size: 13px; }
+
+    .canvas {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: color-mix(in srgb, var(--background) 75%, var(--card));
+      overflow: hidden;
+      min-height: 720px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .mock {
+      display: none;
+      height: 100%;
+    }
+    .mock.active { display: block; }
+
+    /* Mock header */
+    .app {
+      height: 720px;
+      display: grid;
+      grid-template-rows: 52px 1fr;
+      background: var(--background);
+    }
+
+    .appbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 var(--space-4);
+      border-bottom: 1px solid var(--border);
+      background: color-mix(in srgb, var(--background) 88%, var(--card));
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 4px;
+      background: var(--primary);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent);
+    }
+
+    .search {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 520px;
+      max-width: 44vw;
+      height: 36px;
+      padding: 0 12px;
+      border: 1px solid var(--input);
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--card) 88%, var(--muted));
+      color: var(--muted-foreground);
+      font-size: 14px;
+    }
+
+    .kbd {
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 2px 6px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--card) 80%, var(--muted));
+      color: var(--muted-foreground);
+      margin-left: auto;
+    }
+
+    .appbody {
+      display: grid;
+      grid-template-columns: var(--sidebar-w) 1fr;
+      height: 100%;
+      min-width: 0;
+    }
+
+    /* D2 (IDE Split Base) overrides:
+       - Reduce functional nav width
+       - When nav is collapsed, swap the left column into a scrollable template library
+       - Keep a strong left→right flow: Template → Fill → Preview → Copy
+    */
+    .app.d2 .appbody {
+      grid-template-columns: var(--d2-left-w) 1fr 1fr;
+    }
+    .app.d2 {
+      --d2-left-w: 200px; /* expanded nav width (smaller than default sidebar) */
+    }
+    .app.d2[data-d2="collapsed"] {
+      --d2-left-w: 260px; /* template library width */
+    }
+
+    .app.d2 .d2-nav { display: grid; }
+    .app.d2 .d2-templates { display: none; }
+    .app.d2[data-d2="collapsed"] .d2-nav { display: none; }
+    .app.d2[data-d2="collapsed"] .d2-templates { display: grid; }
+
+    .d2-left-header {
+      padding: var(--space-3);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .d2-left-header .lh-title {
+      font-size: 13px;
+      line-height: 20px;
+      font-weight: 600;
+      color: var(--foreground);
+    }
+
+    .d2-templates {
+      grid-template-rows: auto 1fr;
+      height: 100%;
+      min-width: 0;
+    }
+
+    .d2-templates .tmpl-hd {
+      padding: var(--space-3);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .d2-templates .tmpl-hd .title {
+      font-size: 13px;
+      line-height: 20px;
+      font-weight: 600;
+      color: var(--foreground);
+    }
+
+    .d2-templates .tmpl-list {
+      padding: var(--space-2);
+      overflow: auto;
+      display: grid;
+      gap: 8px;
+    }
+
+    .d2-templates .tmpl-item {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--card) 92%, var(--muted));
+      padding: 10px 10px;
+      display: grid;
+      gap: 4px;
+      cursor: pointer;
+    }
+
+    .d2-templates .tmpl-item:hover {
+      border-color: color-mix(in srgb, var(--border) 70%, var(--primary));
+    }
+
+    .d2-templates .tmpl-item .name {
+      font-weight: 600;
+      font-size: 13px;
+      line-height: 18px;
+    }
+
+    .d2-templates .tmpl-item .desc {
+      color: var(--muted-foreground);
+      font-size: 12px;
+      line-height: 18px;
+    }
+
+    .d2-templates .group {
+      margin-top: 10px;
+      margin-bottom: 2px;
+      padding: 0 4px;
+      color: var(--muted-foreground);
+      font-size: 12px;
+      line-height: 18px;
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--border);
+      background: color-mix(in srgb, var(--background) 88%, var(--card));
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 0;
+      min-width: 0;
+    }
+
+    .nav {
+      padding: var(--space-3);
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav .item {
+      height: var(--row-comfy);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 10px;
+      border-radius: 10px;
+      color: var(--muted-foreground);
+      cursor: pointer;
+    }
+
+    .nav.compact .item { height: var(--row-compact); }
+
+    .nav .item.active {
+      background: color-mix(in srgb, var(--primary) 10%, transparent);
+      color: var(--foreground);
+    }
+
+    .nav .pill {
+      margin-left: auto;
+      font-size: 12px;
+      line-height: 18px;
+      padding: 2px 8px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--card) 70%, var(--muted));
+      color: var(--muted-foreground);
+    }
+
+    .main {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr;
+      background: var(--background);
+    }
+
+    .workspace {
+      max-width: var(--content-max);
+      margin: 0 auto;
+      width: 100%;
+      padding: var(--space-5);
+      display: grid;
+      gap: var(--space-5);
+      min-width: 0;
+    }
+
+    .h1 {
+      font-size: var(--fs-h1);
+      line-height: var(--lh-h1);
+      font-weight: 650;
+      margin: 0;
+    }
+
+    .sub {
+      margin: 6px 0 0;
+      color: var(--muted-foreground);
+      font-size: var(--fs-sm);
+      line-height: var(--lh-sm);
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: color-mix(in srgb, var(--card) 95%, var(--muted));
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .card .hd {
+      padding: var(--space-4);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-3);
+    }
+
+    .card .hd .ttl {
+      font-size: 14px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .grid {
+      display: grid;
+      gap: var(--space-4);
+      grid-template-columns: 1fr 1fr;
+      min-width: 0;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .label {
+      font-size: 13px;
+      color: var(--muted-foreground);
+    }
+
+    .input {
+      height: 40px;
+      border: 1px solid var(--input);
+      border-radius: 10px;
+      padding: 0 12px;
+      background: color-mix(in srgb, var(--card) 88%, var(--muted));
+      color: var(--foreground);
+      outline: none;
+    }
+
+    .input:focus {
+      border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--ring) 28%, transparent);
+    }
+
+    .textarea {
+      min-height: 92px;
+      padding: 10px 12px;
+      height: auto;
+      line-height: 22px;
+      resize: none;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-xl {
+      height: 44px;
+      padding: 0 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--foreground);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-xl.primary {
+      background: var(--primary);
+      color: var(--primary-foreground);
+      border-color: color-mix(in srgb, var(--primary) 60%, var(--border));
+    }
+
+    .tag {
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--muted-foreground);
+      background: color-mix(in srgb, var(--card) 70%, var(--muted));
+    }
+
+    .preview {
+      display: grid;
+      gap: var(--space-3);
+      padding: var(--space-4);
+    }
+
+    .section {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--card) 90%, var(--muted));
+      overflow: hidden;
+    }
+
+    .section .sh {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section .sh .st {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .section .body {
+      padding: 12px;
+      color: var(--foreground);
+      font-size: 14px;
+      line-height: 20px;
+    }
+
+    .muted { color: var(--muted-foreground); }
+
+    .cmdk {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: start center;
+      padding-top: 90px;
+      background: rgba(0,0,0,.18);
+    }
+
+    [data-theme="dark"] .cmdk { background: rgba(0,0,0,.42); }
+
+    .cmdk .box {
+      width: min(720px, 92vw);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--popover);
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+
+    .cmdk .q {
+      height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted-foreground);
+      font-size: 14px;
+    }
+
+    .cmdk .items {
+      padding: 8px;
+      display: grid;
+      gap: 6px;
+      max-height: 320px;
+      overflow: auto;
+    }
+
+    .cmdk .it {
+      height: var(--row-compact);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 0 12px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      color: var(--foreground);
+    }
+
+    .cmdk .it.active {
+      background: color-mix(in srgb, var(--primary) 12%, transparent);
+      border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+    }
+
+    .cmdk .it .hint {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted-foreground);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 2px 8px;
+      background: color-mix(in srgb, var(--card) 75%, var(--muted));
+    }
+
+    .footer {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 var(--space-4) var(--space-6);
+      color: var(--muted-foreground);
+      font-size: 13px;
+      line-height: 20px;
+    }
+
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .search { width: 100%; max-width: none; }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <span class="badge"><strong>Qomo</strong> Design Directions · Step 9</span>
+      <span class="badge">对比轴：<strong>Notion 极简</strong> + <strong>IDE 工作台</strong></span>
+      <div style="flex:1"></div>
+      <div class="seg" role="group" aria-label="Theme">
+        <button type="button" id="btnLight" aria-pressed="true">Light</button>
+        <button type="button" id="btnDark" aria-pressed="false">Dark</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="layout">
+    <div class="panel">
+      <div class="panel-header">
+        <h2>Design directions（选择一个方向预览）</h2>
+        <button class="btn" type="button" id="btnToggleCmdk">切换 Cmd/Ctrl+K</button>
+      </div>
+      <div class="list" id="directionList">
+        <div class="option" role="option" tabindex="0" data-target="d1" aria-selected="true">
+          <div class="title">D1 · Notion-minimal + Workbench（默认推荐）</div>
+          <div class="meta">低噪音、内容为王；侧栏 + 工作区；预览分段折叠；导出动作面板</div>
+        </div>
+        <div class="option" role="option" tabindex="0" data-target="d2" aria-selected="false">
+          <div class="title">D2 · IDE Split View（表单左 / 预览右）</div>
+          <div class="meta">更像 IDE：并排编辑/预览，减少滚动；更强调效率</div>
+        </div>
+        <div class="option" role="option" tabindex="0" data-target="d3" aria-selected="false">
+          <div class="title">D3 · Preview-first（预览优先 + 轻表单）</div>
+          <div class="meta">默认先看到结构化预览；必填缺失就地引导；减少“填写焦虑”</div>
+        </div>
+        <div class="option" role="option" tabindex="0" data-target="d4" aria-selected="false">
+          <div class="title">D4 · Sidebar as Template Hub（更强资产库心智）</div>
+          <div class="meta">侧栏更像 Notion：模板/收藏/最近更突出；工作区更克制</div>
+        </div>
+        <div class="option" role="option" tabindex="0" data-target="d5" aria-selected="false">
+          <div class="title">D5 · Command-driven（动作优先的工作台）</div>
+          <div class="meta">命令中心主导工作流：搜索+动作统一入口，适合 power-user</div>
+        </div>
+        <div class="option" role="option" tabindex="0" data-target="d6" aria-selected="false">
+          <div class="title">D6 · Card workflow（更“产品化”的卡片节奏）</div>
+          <div class="meta">卡片分区更强，适合逐步完成；但要小心“流程变长”的反模式</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="canvas" id="canvas">
+      <!-- D1 -->
+      <div class="mock active" id="d1">
+        <div class="app">
+          <div class="appbar">
+            <div class="brand"><span class="dot"></span> Qomo</div>
+            <div class="search">搜索模板 / 动作… <span class="kbd">⌘K</span></div>
+            <div class="actions">
+              <span class="tag">Resume</span>
+              <span class="tag">已沿用上次组合</span>
+            </div>
+          </div>
+          <div class="appbody">
+            <aside class="sidebar">
+              <div class="nav">
+                <div class="item active">从默认模板开始 <span class="pill">New</span></div>
+                <div class="item">最近使用</div>
+                <div class="item">收藏</div>
+                <div class="item">搜索</div>
+              </div>
+              <div class="nav" style="border-top:1px solid var(--border)">
+                <div class="item">导入/导出资产包</div>
+                <div class="item">设置</div>
+              </div>
+              <div style="padding: var(--space-3); border-top: 1px solid var(--border); color: var(--muted-foreground); font-size: 13px; line-height: 20px;">
+                提示：只填两项即可导出。说明≤两句，且包含下一步动作。
+              </div>
+            </aside>
+            <main class="main">
+              <div class="workspace">
+                <div>
+                  <h1 class="h1">Dev Brief Prompt（默认模板）</h1>
+                  <p class="sub">把需求与约束结构化：先澄清问题，再给计划。导出前可折叠预览。</p>
+                </div>
+
+                <div class="card">
+                  <div class="hd">
+                    <div class="ttl">填写（最少必填）</div>
+                    <div class="actions">
+                      <span class="tag">还差 1 项</span>
+                      <button class="btn-xl">恢复默认</button>
+                      <button class="btn-xl primary">生成预览</button>
+                    </div>
+                  </div>
+                  <div style="padding: var(--space-4);">
+                    <div class="grid">
+                      <div class="field">
+                        <div class="label">任务/需求描述（必填）</div>
+                        <input class="input" value="给现有仓库新增一个导出面板：下载 .txt 作为主按钮" />
+                      </div>
+                      <div class="field">
+                        <div class="label">输出偏好（必填）</div>
+                        <input class="input" value="只输出澄清问题 + 执行计划（不直接给代码）" />
+                      </div>
+                      <div class="field" style="grid-column: 1 / -1;">
+                        <div class="label">项目背景（可选，一句话也行）</div>
+                        <textarea class="input textarea">React + Vite 单页应用；离线优先；用户会把最终 Prompt 贴到外部 AI。</textarea>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="card">
+                  <div class="hd">
+                    <div class="ttl">结构化预览（可折叠）</div>
+                    <div class="actions">
+                      <button class="btn-xl primary">复制</button>
+                      <button class="btn-xl">下载 .txt</button>
+                      <button class="btn-xl">全选文本</button>
+                    </div>
+                  </div>
+                  <div class="preview">
+                    <div class="section">
+                      <div class="sh"><div class="st">Clarifying Questions</div><div class="muted">展开</div></div>
+                      <div class="body">1) 导出面板出现的位置是固定还是随导出失败弹出？ 2) 是否需要记录用户上次导出方式？</div>
+                    </div>
+                    <div class="section">
+                      <div class="sh"><div class="st">Plan</div><div class="muted">展开</div></div>
+                      <div class="body">- 定义导出面板优先级：复制为唯一 Primary
+- 剪贴板受限时快速归因 + 直接给替代动作
+- 复用：默认沿用上次组合，可一键恢复默认</div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </main>
+          </div>
+        </div>
+      </div>
+
+      <!-- D2 -->
+      <div class="mock" id="d2">
+        <div class="app d2" data-d2="expanded">
+          <div class="appbar">
+            <div class="brand"><span class="dot"></span> Qomo</div>
+            <div class="search">模板 → 填写 → 预览 → 复制 <span class="kbd">⌘K</span></div>
+            <div class="actions">
+              <span class="tag">D2 Base</span>
+            </div>
+          </div>
+
+          <div class="appbody">
+            <!-- Left column: nav (expanded) OR template library (collapsed) -->
+            <aside class="sidebar d2-left">
+              <div class="d2-left-header">
+                <div class="lh-title">左侧栏</div>
+                <button class="btn" type="button" id="d2Toggle">收起菜单</button>
+              </div>
+
+              <div class="d2-nav">
+                <div class="nav compact">
+                  <div class="item active">导航</div>
+                  <div class="item">默认模板</div>
+                  <div class="item">最近</div>
+                  <div class="item">收藏</div>
+                  <div class="item">搜索</div>
+                </div>
+                <div style="padding: var(--space-3); border-top: 1px solid var(--border); color: var(--muted-foreground); font-size: 13px; line-height: 20px;">
+                  菜单更窄（200px）。可收起后进入“三列”：模板库 / 填写 / 预览。
+                </div>
+              </div>
+
+              <div class="d2-templates">
+                <div class="tmpl-hd">
+                  <div class="title">模板库（可滚动）</div>
+                  <span class="tag">Ctrl/⌘K</span>
+                </div>
+                <div class="tmpl-list">
+                  <div class="group">预设模板</div>
+                  <div class="tmpl-item">
+                    <div class="name">Dev Brief Prompt</div>
+                    <div class="desc">开工前：澄清问题 + 计划（默认）</div>
+                  </div>
+                  <div class="tmpl-item">
+                    <div class="name">Code Review Prompt</div>
+                    <div class="desc">评审维度 + 风险分级 + 建议</div>
+                  </div>
+                  <div class="tmpl-item">
+                    <div class="name">Debug Prompt</div>
+                    <div class="desc">复现信息 + 排查步骤 + 结论</div>
+                  </div>
+
+                  <div class="group">我的模板</div>
+                  <div class="tmpl-item">
+                    <div class="name">邮件总结（个人）</div>
+                    <div class="desc">结构化总结 + 待办列表</div>
+                  </div>
+                  <div class="tmpl-item">
+                    <div class="name">周报模板</div>
+                    <div class="desc">目标/进展/风险/下周计划</div>
+                  </div>
+                </div>
+              </div>
+            </aside>
+
+            <!-- Middle column: fill -->
+            <main class="main">
+              <div class="workspace" style="max-width: none; padding: var(--space-4); gap: var(--space-4);">
+                <div>
+                  <div class="tag">左 → 右路径</div>
+                  <h1 class="h1" style="margin-top: 8px;">填写（中）</h1>
+                  <p class="sub">只填两项即可生成预览；缺失必填会自动定位。</p>
+                </div>
+
+                <div class="card">
+                  <div class="hd">
+                    <div class="ttl">最少必填</div>
+                    <div class="actions">
+                      <button class="btn-xl primary">生成预览</button>
+                    </div>
+                  </div>
+                  <div style="padding: var(--space-4); display:grid; gap: var(--space-3);">
+                    <div class="field">
+                      <div class="label">任务/需求描述（必填）</div>
+                      <input class="input" value="为导出面板把‘复制’做成主按钮，并确保两步就能导出" />
+                    </div>
+                    <div class="field">
+                      <div class="label">输出偏好（必填）</div>
+                      <input class="input" value="澄清问题 + 计划（不直接给代码）" />
+                    </div>
+                    <div class="field">
+                      <div class="label">项目背景（可选，一句话也行）</div>
+                      <textarea class="input textarea">用户希望从左到右：选模板 → 填写 → 预览 → 复制；下载属于低频备选。</textarea>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </main>
+
+            <!-- Right column: preview -->
+            <main class="main">
+              <div class="workspace" style="max-width: none; padding: var(--space-4); gap: var(--space-4);">
+                <div>
+                  <h1 class="h1">预览（右）</h1>
+                  <p class="sub">生成后，重点让用户一眼看到「复制」与「生成预览」。</p>
+                </div>
+
+                <div class="card">
+                  <div class="hd">
+                    <div class="ttl">导出（动作可完成）</div>
+                    <div class="actions">
+                      <button class="btn-xl primary">复制</button>
+                      <button class="btn-xl">下载 .txt</button>
+                      <button class="btn-xl">全选文本</button>
+                    </div>
+                  </div>
+                  <div class="preview">
+                    <div class="section"><div class="sh"><div class="st">Clarifying Questions</div><div class="muted">展开</div></div><div class="body">1) 复制失败时是否自动弹出“全选/下载”兜底？ 2) 是否需要记住用户上次导出方式？</div></div>
+                    <div class="section"><div class="sh"><div class="st">Plan</div><div class="muted">展开</div></div><div class="body">- 保证左→右路径顺畅：模板 → 填写 → 预览 → 复制
+- 两句封顶微文案：解释 + 动作 + 预期
+- 复制失败：快速归因 + 直接给下载/全选兜底</div></div>
+                  </div>
+                </div>
+              </div>
+            </main>
+
+            <div class="cmdk" id="cmdkD2" style="display:none;">
+              <div class="box">
+                <div class="q">命令中心（D2） <span class="kbd" style="margin-left:auto">Esc</span></div>
+                <div class="items">
+                  <div class="it active"><div>切换：收起/展开左侧栏</div><div class="hint">Enter</div></div>
+                  <div class="it"><div>模板：Dev Brief Prompt</div><div class="hint">T</div></div>
+                  <div class="it"><div>导出：复制（Primary）</div><div class="hint">⌘C</div></div>
+                  <div class="it"><div>导出：下载 .txt</div><div class="hint">D</div></div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- D3 -->
+      <div class="mock" id="d3">
+        <div class="app">
+          <div class="appbar">
+            <div class="brand"><span class="dot"></span> Qomo</div>
+            <div class="search">预览优先（结构先让你看懂） <span class="kbd">⌘K</span></div>
+            <div class="actions"><span class="tag">Preview-first</span></div>
+          </div>
+          <div class="appbody">
+            <aside class="sidebar">
+              <div class="nav">
+                <div class="item active">默认模板</div>
+                <div class="item">最近使用</div>
+                <div class="item">收藏</div>
+                <div class="item">搜索</div>
+              </div>
+              <div style="padding: var(--space-3); border-top: 1px solid var(--border); color: var(--muted-foreground); font-size: 13px; line-height: 20px;">先看结构，再补必填。</div>
+            </aside>
+            <main class="main">
+              <div class="workspace">
+                <div class="card">
+                  <div class="hd">
+                    <div class="ttl">结构化预览（先展示）</div>
+                    <div class="actions">
+                      <button class="btn-xl primary">下载 .txt</button>
+                      <button class="btn-xl">复制</button>
+                    </div>
+                  </div>
+                  <div class="preview">
+                    <div class="section"><div class="sh"><div class="st">Clarifying Questions</div><div class="muted">展开</div></div><div class="body">你还没填必填，我可以先告诉你需要确认什么。</div></div>
+                    <div class="section"><div class="sh"><div class="st">Plan</div><div class="muted">展开</div></div><div class="body muted">补齐必填后生成完整计划。</div></div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="hd">
+                    <div class="ttl">补齐必填（就地定位）</div>
+                    <div class="actions"><span class="tag">还差 2 项</span></div>
+                  </div>
+                  <div style="padding: var(--space-4);">
+                    <div class="grid">
+                      <div class="field">
+                        <div class="label">任务/需求描述（必填）</div>
+                        <input class="input" placeholder="例如：为导出面板增加‘下载 .txt’作为主按钮" />
+                      </div>
+                      <div class="field">
+                        <div class="label">输出偏好（必填）</div>
+                        <input class="input" placeholder="例如：澄清问题 + 计划" />
+                      </div>
+                    </div>
+                    <div style="margin-top: var(--space-3); color: var(--muted-foreground); font-size: 14px; line-height: 20px;">只填两项即可导出，其余交给澄清问题承接。</div>
+                  </div>
+                </div>
+              </div>
+            </main>
+          </div>
+        </div>
+      </div>
+
+      <!-- D4 -->
+      <div class="mock" id="d4">
+        <div class="app">
+          <div class="appbar">
+            <div class="brand"><span class="dot"></span> Qomo</div>
+            <div class="search">更强资产库心智（侧栏突出模板） <span class="kbd">⌘K</span></div>
+            <div class="actions"><span class="tag">Template Hub</span></div>
+          </div>
+          <div class="appbody">
+            <aside class="sidebar" style="grid-template-rows: auto 1fr;">
+              <div class="nav">
+                <div class="item active">模板库</div>
+                <div class="item">最近</div>
+                <div class="item">收藏</div>
+                <div class="item">标签</div>
+              </div>
+              <div style="padding: var(--space-3); display:grid; gap: 8px;">
+                <div class="option" aria-selected="true">
+                  <div class="title">Dev Brief Prompt</div>
+                  <div class="meta">开工前：澄清问题 + 计划</div>
+                </div>
+                <div class="option" aria-selected="false">
+                  <div class="title">Code Review Prompt</div>
+                  <div class="meta">评审维度 + 风险分级</div>
+                </div>
+                <div class="option" aria-selected="false">
+                  <div class="title">Debug Prompt</div>
+                  <div class="meta">复现信息 + 排查步骤</div>
+                </div>
+              </div>
+            </aside>
+            <main class="main">
+              <div class="workspace">
+                <div>
+                  <h1 class="h1">Dev Brief Prompt</h1>
+                  <p class="sub">选中模板后，工作区只做“填写 → 预览 → 导出”。</p>
+                </div>
+                <div class="card">
+                  <div class="hd"><div class="ttl">填写</div><div class="actions"><button class="btn-xl primary">生成预览</button></div></div>
+                  <div style="padding: var(--space-4);">
+                    <div class="grid">
+                      <div class="field"><div class="label">任务（必填）</div><input class="input" value="为命令中心增加‘最近动作’" /></div>
+                      <div class="field"><div class="label">偏好（必填）</div><input class="input" value="澄清问题 + 计划" /></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="hd"><div class="ttl">导出</div><div class="actions"><button class="btn-xl primary">下载 .txt</button><button class="btn-xl">复制</button></div></div>
+                  <div class="preview"><div class="section"><div class="sh"><div class="st">Plan</div><div class="muted">展开</div></div><div class="body">…</div></div></div>
+                </div>
+              </div>
+            </main>
+          </div>
+        </div>
+      </div>
+
+      <!-- D5 -->
+      <div class="mock" id="d5">
+        <div class="app" style="position: relative;">
+          <div class="appbar">
+            <div class="brand"><span class="dot"></span> Qomo</div>
+            <div class="search">命令中心主导：找模板/导出/收藏/恢复默认 <span class="kbd">⌘K</span></div>
+            <div class="actions"><span class="tag">Command-driven</span></div>
+          </div>
+          <div class="appbody">
+            <aside class="sidebar">
+              <div class="nav compact">
+                <div class="item active">命令中心</div>
+                <div class="item">默认模板</div>
+                <div class="item">最近</div>
+                <div class="item">收藏</div>
+              </div>
+              <div style="padding: var(--space-3); border-top: 1px solid var(--border); color: var(--muted-foreground); font-size: 13px;">高频区紧凑 + 键盘流</div>
+            </aside>
+            <main class="main">
+              <div class="workspace">
+                <div>
+                  <h1 class="h1">你几乎不用找按钮</h1>
+                  <p class="sub">用命令中心完成：切换模板 / 导出 / 收藏 / 恢复默认 / 打开最近组合。</p>
+                </div>
+                <div class="card">
+                  <div class="hd"><div class="ttl">当前会话</div><div class="actions"><button class="btn-xl primary">下载 .txt</button><button class="btn-xl">复制</button></div></div>
+                  <div class="preview"><div class="section"><div class="sh"><div class="st">Clarifying Questions</div><div class="muted">展开</div></div><div class="body">…</div></div></div>
+                </div>
+              </div>
+            </main>
+          </div>
+
+          <div class="cmdk" id="cmdk" style="display:none;">
+            <div class="box">
+              <div class="q">输入命令或搜索… <span class="kbd" style="margin-left:auto">Esc</span></div>
+              <div class="items">
+                <div class="it active"><div>导出：下载 .txt</div><div class="hint">Enter</div></div>
+                <div class="it"><div>导出：复制</div><div class="hint">⌘C</div></div>
+                <div class="it"><div>切换模板：Dev Brief Prompt</div><div class="hint">T</div></div>
+                <div class="it"><div>收藏/取消收藏</div><div class="hint">F</div></div>
+                <div class="it"><div>恢复默认组合</div><div class="hint">R</div></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- D6 -->
+      <div class="mock" id="d6">
+        <div class="app">
+          <div class="appbar">
+            <div class="brand"><span class="dot"></span> Qomo</div>
+            <div class="search">卡片工作流（但保持最短路径） <span class="kbd">⌘K</span></div>
+            <div class="actions"><span class="tag">Card workflow</span></div>
+          </div>
+          <div class="appbody">
+            <aside class="sidebar">
+              <div class="nav">
+                <div class="item active">默认模板</div>
+                <div class="item">最近</div>
+                <div class="item">收藏</div>
+              </div>
+              <div style="padding: var(--space-3); border-top: 1px solid var(--border); color: var(--muted-foreground); font-size: 13px; line-height: 20px;">注意：避免流程变长。</div>
+            </aside>
+            <main class="main">
+              <div class="workspace">
+                <div>
+                  <h1 class="h1">三步卡片：填 → 看 → 导出</h1>
+                  <p class="sub">视觉更“产品化”，但要严格控制步骤与文案长度。</p>
+                </div>
+                <div class="grid" style="grid-template-columns: 1fr;">
+                  <div class="card"><div class="hd"><div class="ttl">1) 填写（两项必填）</div><div class="actions"><span class="tag">还差 1 项</span></div></div><div style="padding: var(--space-4);"><div class="grid"><div class="field"><div class="label">任务（必填）</div><input class="input" value="为模板列表增加快捷键" /></div><div class="field"><div class="label">偏好（必填）</div><input class="input" value="澄清问题 + 计划" /></div></div></div></div>
+                  <div class="card"><div class="hd"><div class="ttl">2) 预览（折叠结构）</div><div class="actions"><button class="btn-xl">生成预览</button></div></div><div class="preview"><div class="section"><div class="sh"><div class="st">Plan</div><div class="muted">展开</div></div><div class="body">…</div></div></div></div>
+                  <div class="card"><div class="hd"><div class="ttl">3) 导出（可完成）</div><div class="actions"><button class="btn-xl primary">下载 .txt</button><button class="btn-xl">复制</button></div></div><div style="padding: var(--space-4); color: var(--muted-foreground);">复制失败时，直接给下载/全选兜底。</div></div>
+                </div>
+              </div>
+            </main>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="footer">
+    <p style="margin:0 0 8px;">
+      说明：这是 Step 9 的方向探索页（非最终 UI）。你可以先在 <strong>Light/Dark</strong> 间切换，再对比每个方向的层级、密度、工作台结构和导出面板。
+    </p>
+    <p style="margin:0;">
+      建议选择方式：先选一个基底（推荐 D1 或 D2），再从其它方向抽取元素（例如 D5 的命令中心强调）。
+    </p>
+  </div>
+
+  <script>
+    (function () {
+      const root = document.documentElement;
+      const btnLight = document.getElementById('btnLight');
+      const btnDark = document.getElementById('btnDark');
+      const list = document.getElementById('directionList');
+      const options = Array.from(list.querySelectorAll('.option'));
+      const cmdk = document.getElementById('cmdk');
+      const btnToggleCmdk = document.getElementById('btnToggleCmdk');
+
+      function setTheme(theme) {
+        if (theme === 'dark') {
+          root.setAttribute('data-theme', 'dark');
+          btnDark.setAttribute('aria-pressed', 'true');
+          btnLight.setAttribute('aria-pressed', 'false');
+        } else {
+          root.removeAttribute('data-theme');
+          btnDark.setAttribute('aria-pressed', 'false');
+          btnLight.setAttribute('aria-pressed', 'true');
+        }
+      }
+
+      const d2App = document.querySelector('#d2 .app.d2');
+      const d2Toggle = document.getElementById('d2Toggle');
+      const cmdkD2 = document.getElementById('cmdkD2');
+
+      function setD2Mode(mode) {
+        if (!d2App || !d2Toggle) return;
+        const next = mode === 'collapsed' ? 'collapsed' : 'expanded';
+        d2App.setAttribute('data-d2', next);
+        d2Toggle.textContent = next === 'collapsed' ? '展开菜单' : '收起菜单';
+      }
+
+      function setActive(id) {
+        document.querySelectorAll('.mock').forEach(el => el.classList.remove('active'));
+        const el = document.getElementById(id);
+        if (el) el.classList.add('active');
+        options.forEach(o => o.setAttribute('aria-selected', o.dataset.target === id ? 'true' : 'false'));
+        // Hide command overlays
+        if (cmdk) cmdk.style.display = 'none';
+        if (cmdkD2) cmdkD2.style.display = 'none';
+        // Keep D2 toggle label in sync when switching back
+        if (id === 'd2' && d2App) setD2Mode(d2App.getAttribute('data-d2') || 'expanded');
+      }
+
+      btnLight.addEventListener('click', () => setTheme('light'));
+      btnDark.addEventListener('click', () => setTheme('dark'));
+
+      if (d2Toggle) {
+        d2Toggle.addEventListener('click', () => {
+          const active = document.querySelector('.mock.active');
+          if (!active || active.id !== 'd2') {
+            setActive('d2');
+          }
+          const cur = d2App?.getAttribute('data-d2') || 'expanded';
+          setD2Mode(cur === 'collapsed' ? 'expanded' : 'collapsed');
+        });
+      }
+
+      list.addEventListener('click', (e) => {
+        const opt = e.target.closest('.option');
+        if (!opt) return;
+        setActive(opt.dataset.target);
+      });
+
+      options.forEach(opt => {
+        opt.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setActive(opt.dataset.target);
+          }
+        });
+      });
+
+      function toggleCmdk() {
+        const active = document.querySelector('.mock.active');
+        if (!active) return;
+
+        if (active.id === 'd5') {
+          if (!cmdk) return;
+          cmdk.style.display = cmdk.style.display === 'none' ? 'grid' : 'none';
+          return;
+        }
+
+        if (active.id === 'd2') {
+          if (!cmdkD2) return;
+          cmdkD2.style.display = cmdkD2.style.display === 'none' ? 'grid' : 'none';
+          return;
+        }
+
+        alert('命令中心示例目前仅在 D2 / D5 方向里展示。');
+      }
+
+      btnToggleCmdk.addEventListener('click', toggleCmdk);
+      window.addEventListener('keydown', (e) => {
+        const isMac = navigator.platform.toLowerCase().includes('mac');
+        const mod = isMac ? e.metaKey : e.ctrlKey;
+        if (mod && e.key.toLowerCase() === 'k') {
+          e.preventDefault();
+          toggleCmdk();
+        }
+        if (e.key === 'Escape') {
+          if (cmdk) cmdk.style.display = 'none';
+          if (cmdkD2) cmdkD2.style.display = 'none';
+        }
+      });
+
+      // Default
+      setTheme('light');
+      setActive('d1');
+    })();
+  </script>
+</body>
+</html>
