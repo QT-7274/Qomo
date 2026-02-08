@@ -16,7 +16,7 @@
 #   - skipped: Optional/conditional workflow that was skipped
 
 generated: "2025-12-27"
-updated: "2025-12-28"
+updated: "2026-02-07"
 project: "Qomo"
 project_type: "web-app"
 project_level: "intermediate"
@@ -32,10 +32,10 @@ workflow_status:
 
   # Planning
   prd: docs/prd.md
-  create-ux-design: conditional
+  create-ux-design: docs/ux-design-specification.md
 
   # Solutioning
-  create-architecture: required
+  create-architecture: docs/project-planning-artifacts/architecture.md
   create-epics-and-stories: required
   test-design: recommended
   validate-architecture: optional

@@ -30,6 +30,7 @@ build-ssr
 _bmad
 .claude
 .shared
+.codex
 
 
 # Mault Memory Layer (auto)

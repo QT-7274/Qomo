@@ -1,10 +1,10 @@
 ---
-stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 inputDocuments:
   - docs/prd.md
   - docs/analysis/product-brief-Qomo-2025-12-27.md
 workflowType: 'ux-design'
-lastStep: 9
+lastStep: 14
 project_name: 'Qomo'
 user_name: 'drogbaqu'
 date: '2025-12-29'
@@ -452,3 +452,448 @@ Qomo 需要教育的关键新模式是一个“组合体验”：
 - 前端实现以 `Tailwind + shadcn/ui` 为基础：工作台布局（左侧栏 + 工作区分栏）。
 - “收起后切模板库”的形态可先以固定宽度实现，后续可升级为可拖拽调整（resizable panels）。
 - 命令中心复用同一套 action 列表（搜索模板 + 执行动作），保证键盘流与可发现性。
+
+---
+
+## Step 10 - User Journey Flows
+
+> 目标：把 PRD 的 Journey 叙事落成“可执行交互流程”（包含成功/失败/恢复路径），并抽取可复用的模式供实现对齐。
+
+## User Journey Flows
+
+### Journey 1：新手快速生成并导出（默认模板驱动主路径）
+
+- **目标**：用户无需理解概念，完成 “默认模板 → 填 2 项必填 → 预览 → 导出（复制/下载/全选兜底）”。
+- **关键约束**
+  - 唯一硬拦截：空内容 / 全占位符 → `validation_blocked`
+  - 非阻断提示：未填变量/格式一致性/敏感信息 → `validation_warning_shown`（允许继续）
+  - 导出永可完成：复制失败/被拒不让用户碰运气重试，直接给替代路径
+
+```mermaid
+flowchart TD
+  A[打开应用] --> B{是否有可恢复会话?}
+  B -->|是| B1[Resume 上次组合(可见提示+可回退)]
+  B -->|否| C[首页主 CTA: 从默认模板开始]
+
+  B1 --> D[进入工作台]
+  C --> D
+
+  D --> E[填写最少必填: Task + Output Preference]
+  E --> F{必填齐全?}
+  F -->|否| F1[高亮缺失+自动定位+示例]
+  F1 --> E
+  F -->|是| G[生成预览]
+
+  G --> H{校验}
+  H -->|空/全占位符| H1[硬拦截: validation_blocked\n给下一步动作]
+  H1 --> E
+  H -->|非阻断警告| H2[显示 warning(可展开)\n继续按钮同屏可达]
+  H2 --> I[预览区(结构化分段可折叠)]
+  H -->|无问题| I
+
+  I --> J[导出动作面板]
+  J --> K[Primary: 复制]
+  J --> L[Secondary: 下载 .txt]
+  J --> M[Fallback: 全选文本区]
+
+  K --> K1{复制成功?}
+  K1 -->|是| S[copy_success\n去重(30s)]
+  K1 -->|否| N{权限/策略拒绝?}
+  N -->|是| N1[export_denied\n主动作切到下载]
+  N -->|否| N2[copy_error\n给下载/全选替代]
+
+  N1 --> L
+  N2 --> L
+  L --> S2[export_success]
+  M --> S3[手动完成导出(可选记录)]
+```
+
+### Journey 2：复制受限也能完成导出（不可失败时刻）
+
+- **目标**：剪贴板被拒绝时不丢状态，仍能完成导出。
+- **文案规则**：1+1+1（发生了什么/下一步动作/预期）
+
+```mermaid
+flowchart TD
+  A[点击复制] --> B{Clipboard 可用且授权?}
+  B -->|是| C[复制成功] --> D[copy_success]
+  B -->|否| E[识别 export_denied]
+  E --> F[打开导出面板\nPrimary=下载 .txt\n仍保留全选兜底]
+  F --> G[下载 .txt] --> H[export_success]
+  F --> I[全选文本区] --> J[手动完成导出]
+```
+
+### Journey 3：开发者维护模块库（专家模式/治理）
+
+- **目标**：维护模块库，跨模板复用；修改模块时可控升级，避免“牵一发动全身”。
+- **关键点**
+  - 模块详情提供：**引用计数 + 引用模板列表**
+  - 保存提供两种策略：**直接更新** vs **保存为副本**（不影响已有引用）
+
+```mermaid
+flowchart TD
+  A[进入专家模式] --> B[搜索/筛选模块]
+  B --> C[模块详情]
+  C --> D[查看内容/标签/最近使用]
+  C --> E[查看引用: 计数 + 模板列表]
+  C --> F[编辑模块]
+  F --> G{保存策略}
+  G -->|直接更新| G1[提示影响范围: 将影响 N 个模板]
+  G -->|保存为副本| G2[创建模块副本\n原引用不变]
+  G1 --> H[保存成功]
+  G2 --> H
+  H --> I[回到模板编辑/组合]
+  I --> J[生成预览] --> K[导出面板(复制/下载/全选)]
+```
+
+### Journey 4：迁移/导入资产包（安全提示但不默认阻断）
+
+- **目标**：导入资产并处理冲突；对可疑指令/敏感信息做“摘要提醒 + 可展开片段”，不默认阻断。
+- **关键点**
+  - 冲突策略：合并 / 覆盖 / 新建副本（默认安全建议：合并或副本优先）
+  - 导入后必须提供：**导入报告** + **撤销本次导入**
+
+```mermaid
+flowchart TD
+  A[设置/资产管理 -> 导入资产包] --> B[选择文件(JSON)]
+  B --> C[预检: 版本/结构/数量摘要]
+  C --> D{版本兼容?}
+  D -->|否| D1[提示原因+建议路径\n可返回或继续(风险)]
+  D -->|是| E[扫描冲突: 同名模板/模块/约束包]
+
+  C --> K[安全提示(非阻断):\n可疑指令/敏感信息\n摘要+可展开片段]
+  K --> L[继续导入 / 返回修改文件]
+  L --> E
+
+  E --> F{存在冲突?}
+  F -->|否| G[一键导入]
+  F -->|是| H[选择策略: 合并/覆盖/新建副本]
+  G --> I[执行导入]
+  H --> I
+
+  I --> J[导入完成页:\n成功/副本/跳过摘要]
+  J --> R[查看导入报告]
+  J --> U[撤销本次导入]
+```
+
+### Journey 5：隐私敏感用户（透明与可控）
+
+- **目标**：用户能明确理解“默认只本地/可关闭遥测/可重置匿名标识/可查看事件清单”。
+
+```mermaid
+flowchart TD
+  A[设置 -> 隐私与数据] --> B[说明: 单次内容默认不入库\n仅保存资产才入库(本地)]
+  B --> C[查看: 事件采集清单]
+  B --> D[开关: 遥测启用/关闭]
+  B --> E[动作: 重置匿名标识]
+  D --> F[确认: 影响说明] --> G[保存设置]
+  E --> H[确认: 历史统计断点说明] --> I[重置完成]
+```
+
+### Journey 6：本地数据丢失/恢复（离线可信）
+
+- **目标**：用户清缓存/误删后仍有“恢复感”和清晰路径（导入资产包），不羞辱用户。
+
+```mermaid
+flowchart TD
+  A[打开应用] --> B{检测到本地资产为空?}
+  B -->|否| C[正常进入]
+  B -->|是| D[空状态:\n解释本地存储机制与风险]
+  D --> E[主按钮: 导入资产包恢复]
+  D --> F[次按钮: 从默认模板开始(无资产模式)]
+  E --> G[走导入流程(同 Journey 4)] --> H[恢复成功]
+```
+
+### Journey Patterns（跨旅程一致性模式）
+
+- **导出永可完成**：复制失败/被拒 → 立即给 `下载 .txt` + `全选文本区`（不让用户反复碰运气重试）。
+- **Visible Automation（可见且可回退）**：Resume/自动回填必须提示“已沿用上次组合”，并有“一键恢复默认”。
+- **Confusion Budget（1+1+1）**：任何提示都包含：原因 + 下一步动作 + 预期。
+- **最少必填**：新手只卡 `Task + Output Preference`，其它信息交给“澄清问题输出策略”承接。
+
+### Flow Optimization Principles（流程优化原则）
+
+- **默认动作优先**：主路径只强调“开始生成/生成预览/复制”，其余折叠。
+- **失败分类清晰**：`export_denied`（权限/策略）与 `copy_error/export_error`（系统异常）不同文案与动作，但都保证可完成导出。
+- **状态不丢**：任何导出失败/拒绝都不清空预览、不重置表单。
+
+### 事件口径对齐（Event ↔ Trigger ↔ UI Behavior）
+
+| 事件 | 触发条件（简化） | UI 行为（关键） |
+|---|---|---|
+| `copy_success` | 复制成功 | Toast + 保持在导出面板；进入 30s 去重窗口 |
+| `export_success` | 下载成功 | Toast；保持当前预览/表单状态 |
+| `export_denied` | 权限/策略拒绝写剪贴板 | 同屏提示 + 导出面板主动作切换为“下载 .txt” |
+| `copy_error` / `export_error` | 系统异常导致动作失败 | 同屏提示 + 直接给替代路径（下载/全选） |
+| `export_duplicate` | 30s 内同一规范化内容重复导出 | 轻提示“不计入统计”，不阻断导出 |
+| `validation_warning_shown` | 非阻断校验命中 | 可展开提示；“继续导出”同屏可达 |
+| `validation_blocked` | 空/全占位符 | 硬拦截 + 自动定位缺失项 |
+
+---
+
+## Step 11 - Component Strategy
+
+> 目标：明确「哪些直接用 `shadcn/ui`」，以及「哪些需要自研组合型组件」来承载 Qomo 的业务语义（导出永可完成、导入可撤销、模块影响范围等）。
+
+## Component Strategy
+
+### Design System Components（来自 `shadcn/ui`）
+
+- **布局/容器**：`Sheet`（小屏侧栏抽屉）、`Separator`、`ScrollArea`、（可选）`ResizablePanelGroup`
+- **输入**：`Input`、`Textarea`、`Select`、`Checkbox`、`Switch`
+- **反馈**：`Toast`、`Alert`、`Badge`、`Tooltip`
+- **弹层**：`Dialog`、`Popover`、`DropdownMenu`
+- **导航/组织**：`Tabs`、（可选）`Accordion`、`Command`（Cmd/Ctrl+K 命令中心）
+
+### Custom Components（建议自研的组合型组件）
+
+#### ExportActionPanel（导出动作面板）
+
+- **Purpose**：保证“导出永可完成”，将 `copy_success`/`export_success`/`export_denied`/`copy_error`/`export_error`/`export_duplicate` 的 UI 行为收敛。
+- **Anatomy**：标题区（说明/状态）+ 主按钮（复制或下载，按场景切换）+ 次按钮（下载/复制）+ 兜底区（全选文本区）+（可选）可展开的事件口径说明。
+- **States**：default / denied（`export_denied`）/ error / duplicate
+- **Accessibility**：主次按钮语义清晰；全选文本区可聚焦；toast 不替代可见说明。
+
+#### TemplateSidebar（模板库侧栏）
+
+- **Purpose**：承载“默认模板/最近/收藏/搜索/导入导出入口”，符合 D2 左→右路径。
+- **States**：展开/收起；空列表；搜索无结果；条目 hover/active；收藏态。
+- **Accessibility**：列表项键盘可选；当前项 `aria-selected`。
+
+#### ResumeBanner（可见自动化提示条）
+
+- **Purpose**：统一呈现“已沿用上次组合（可恢复默认）”，避免实现阶段到处散落不一致文案。
+- **States**：显示/隐藏；“已沿用”/“已恢复默认”；（可选）撤销。
+
+#### RequiredFieldHelper（必填缺失定位与示例）
+
+- **Purpose**：落实 confusion budget：缺失必填时“高亮 + 自动定位 + 示例”。
+- **Anatomy**：字段级 inline 提示 + 顶部汇总（还差 N 项，可跳转）。
+- **Accessibility**：提示与控件绑定（`aria-describedby`），焦点跳转可预期。
+
+#### PreviewSections（结构化预览分段）
+
+- **Purpose**：预览按 Task/Context/Constraints… 分段可折叠，但导出始终是一份纯文本 Prompt。
+- **States**：折叠/展开；命中高亮（校验提示定位）。
+- **Accessibility**：折叠控件键盘可用；标题语义正确。
+
+#### ImportWizard（导入向导弹窗）
+
+- **Purpose**：把 Journey 4/6 的导入流程收敛为一致向导：预检 → 冲突策略 → 执行 → 结果（含导入报告/撤销）。
+- **关键页面**：
+  - 预检页：版本/数量摘要 + 风险提示（可展开）
+  - 冲突策略页：合并/覆盖/副本（默认安全建议突出）
+  - 结果页：导入报告 + “撤销本次导入”
+
+#### ModuleImpactNotice（模块影响范围提示）
+
+- **Purpose**：支撑 Journey 3：模块更新前提示“将影响 N 个模板”，并提供引用列表入口。
+
+### Component Implementation Strategy（实现策略）
+
+- **Foundation first**：优先用 `shadcn/ui` 原子组件拼装，保持 token/交互一致性。
+- **组合组件集中管理**：组合型组件集中维护，避免页面间复制粘贴。
+- **事件口径与 UI 强绑定**：导出/校验/导入相关事件由组件内部统一触发。
+
+### Implementation Roadmap（按旅程关键性排序）
+
+- **Phase 1（核心闭环）**：`TemplateSidebar`、`RequiredFieldHelper`、`PreviewSections`、`ExportActionPanel`
+- **Phase 2（迁移与可信）**：`ImportWizard`（含导入报告/撤销）
+- **Phase 3（高阶治理）**：`ModuleImpactNotice` + 专家模式相关组合组件
+
+---
+
+## Step 12 - UX Consistency Patterns
+
+> 目标：把“按钮/表单/反馈/导航/弹层/空状态”等高频交互固化为一致性模式，减少实现阶段在细节上反复发散。
+
+## UX Consistency Patterns
+
+### Button Hierarchy
+
+**原则（全局硬约束）**
+- **唯一 Primary**：同一视窗（页面/弹窗/面板）最多 1 个 Primary。
+- **Primary 永远对应“可推进价值链路的下一步”**：例如生成、导出、保存、继续。
+- **危险动作永不做 Primary**：删除/覆盖/清空/丢失不可逆等，仅用 Destructive，并要求二次确认。
+
+**Qomo 场景落地**
+- **导出动作面板**：默认 Primary = “复制”；当发生 `export_denied` 时允许“主动作切换”为“下载 `.txt`”（因为复制已不可完成，下载成为唯一可完成路径）。
+- **导入冲突策略**：默认推荐“合并/新建副本”（安全策略）应做 Primary；“覆盖”保持 Destructive。
+- **恢复默认**：永远是 secondary/ghost（不与生成/导出抢主位）。
+
+**状态与反馈**
+- Primary/Secondary 触发后必须给出即时反馈：
+  - 成功：`Toast`（短） + 保持状态不丢（不重置表单/预览）
+  - 失败：同屏错误（含 1+1+1）+ 直接给替代路径
+
+**可访问性**
+- 键盘可达：`Tab` 顺序稳定（主动作在可预测位置）。
+- `Enter`：默认触发当前焦点控件，不做“全局 Enter 自动导出”的隐式行为（避免误触）。
+- `Esc`：关闭弹窗/浮层并回到触发点。
+
+### Feedback Patterns（Success / Error / Warning / Info）
+
+**统一信息结构（Confusion Budget 1+1+1）**
+- **发生了什么/为什么**（一句话）
+- **下一步动作**（按钮/链接/快捷操作）
+- **预期结果**（点了会怎样、是否会丢数据）
+
+**反馈层级**
+- **Toast（短反馈）**：用于成功/轻提示（例如 `copy_success`、`export_success`、`export_duplicate`）。
+- **Inline（就地反馈）**：用于可修复问题（必填缺失、校验警告）。
+- **Blocking（阻断反馈）**：仅用于唯一硬拦截：空内容/全占位符（`validation_blocked`）。
+- **Panel-level（面板级）**：导出失败/被拒（`copy_error`/`export_denied`）必须同屏给出替代路径。
+
+**错误分类与策略**
+- **`export_denied`（权限/策略拒绝）**：不是系统崩溃，也不是用户错 → 解释短；主动作切换到下载 `.txt`；全选文本区作为兜底。
+- **`copy_error` / `export_error`（系统异常）**：明确告知“系统失败，目标为 0”；给替代路径并提供“复制错误详情/重试（可选）”。
+
+### Form Patterns（字段、校验、缺失引导）
+
+**最少必填**
+- 新手路径仅硬必填：`Task` + `Output Preference`。
+
+**校验分级**
+- **阻断**：空内容/全占位符（`validation_blocked`）。
+- **非阻断**：未填变量、格式一致性、敏感信息提示（`validation_warning_shown`）。
+
+**缺失引导（RequiredFieldHelper 规范）**
+- 字段级：红色仅用于错误/缺失（不要把 warning 也用红）。
+- 顶部汇总：显示“还差 N 项”，点击可跳转定位。
+- 聚焦策略：自动跳转到第一个缺失字段，并给 1 条示例输入（就地）。
+
+**输入/说明**
+- 帮助文案两句封顶，且必须包含下一步动作（例如“点这里补完必填后即可预览并导出”）。
+
+### Navigation Patterns（Workbench、命令中心、列表）
+
+**主导航心智**
+- D2 左→右：`TemplateSidebar`（选择）→ 表单（填写）→ 预览（验证）→ 导出（完成）。
+
+**命令中心（`Cmd/Ctrl+K`）**
+- 统一“搜索 + 动作”：找模板、打开最近组合、复制、下载、收藏、恢复默认。
+- 命令条目必须展示快捷键（如有）与副标题（解释作用）。
+
+**列表行为**
+- Template 列表：单击选择；双击可进入“编辑模板”（专家模式才出现）。
+- 列表项提供一致的三态：default / hover / active（当前选中）。
+
+### Modal & Overlay Patterns（Dialog / Popover / Drawer）
+
+**选择规则**
+- **Dialog**：需要用户做决定/多步向导（导入向导、冲突策略）。
+- **Popover**：轻量解释/二级动作，不承载关键任务。
+- **Drawer/Sheet**：小屏承载侧栏（模板库），确保核心链路可完成。
+
+**焦点管理**
+- 打开：焦点进入第一可交互元素（或对话框标题后的首字段）。
+- 关闭：回到触发按钮。
+
+### Empty States & Loading States
+
+**空状态（必须“给路”）**
+- 本地资产为空：主按钮“导入资产包恢复”；次按钮“从默认模板开始（无资产模式）”。
+
+**加载/生成**
+- 生成预览必须有明确 loading：
+  - p50 以内可用 skeleton；更慢则显示进度/文案提示（避免无响应焦虑）。
+
+### Search & Filtering Patterns
+
+**搜索默认行为**
+- 模糊匹配模板名/标签；结果为空给“创建/导入/清空过滤”引导。
+
+**过滤器**
+- 默认折叠高级过滤，避免选择瘫痪。
+
+### Design System Integration（`shadcn/ui` 对齐规则）
+
+- **按钮**：只允许 `primary/secondary/ghost/destructive` 四类语义变体，禁止页面私自造第五种“接近 primary”。
+- **反馈**：成功用 `Toast`；阻断用 `Alert`（可带 action）。
+- **表单**：字段错误用统一的 `aria-describedby` 关联提示；警告不使用错误色。
+- **可见自动化**：`ResumeBanner` 统一承载“已沿用上次组合/可恢复默认”，避免分散实现导致文案不一致。
+
+---
+
+## Step 13 - Responsive Design & Accessibility
+
+> 目标：定义跨设备适配策略与无障碍要求，保证小屏“不断链路”，桌面“高效率”。
+
+## Responsive Design & Accessibility
+
+### Responsive Strategy
+
+**Desktop（默认）**
+- 三列/分栏工作台：侧栏（模板/最近/收藏/搜索）+ 表单 + 预览。
+- 键盘流优先：命令中心、列表选择、表单定位、导出动作。
+
+**Tablet**
+- 保持双列：侧栏可折叠为抽屉；表单与预览可切换 Tabs。
+- 触控目标保证：关键按钮/列表行不小于 44px 高。
+
+**Mobile（底线：可完成）**
+- 侧栏改为 `Sheet`/Drawer；工作区以单列为主：表单 → 预览 → 导出。
+- 预览默认折叠；导出面板可固定在底部区域（不遮挡输入）。
+
+### Breakpoint Strategy
+
+- **Mobile**：320–767
+- **Tablet**：768–1023
+- **Desktop**：1024+
+
+**Qomo 关键断点行为**
+- < 768：侧栏抽屉；预览与表单分屏取消，改为 Tabs/分段。
+- 768–1023：侧栏可保持收起态；表单与预览优先并排（如果空间允许）。
+- ≥ 1024：启用 D2 分栏布局。
+
+### Accessibility Strategy
+
+- **目标级别**：WCAG **AA**（作为产品体验与工程验收底线）。
+
+**关键要求**
+- 对比度：正文尽量满足 AA（\(\ge 4.5:1\)）；大字号标题 \(\ge 3:1\)。
+- 键盘可用：所有关键路径（选模板、填必填、生成预览、复制/下载/全选）全键盘可完成。
+- 焦点可见：focus ring 明显（用 `--ring`）；不允许“只靠颜色变化”。
+- 屏幕阅读器：语义结构正确；`Dialog` 标题/描述可读；表单错误提示通过 `aria-describedby` 关联。
+- Toast 不替代信息：关键错误必须同屏可读（Toast 只是辅助）。
+
+### Testing Strategy
+
+**Responsive**
+- 浏览器：Chrome / Safari / Firefox / Edge。
+- 设备：至少覆盖 iPhone 小屏、Android 常见屏、iPad/类平板。
+
+**Accessibility**
+- 键盘走查：Tab 顺序、Esc/Enter 行为、焦点返回。
+- 屏幕阅读器抽查：macOS VoiceOver（优先）+（可选）NVDA。
+- 对比度检查：暗色输入框、提示文案、边框与 focus ring。
+
+### Implementation Guidelines
+
+- 响应式：优先移动端约束下的单列布局，再升级为桌面分栏（避免“桌面做完再硬塞小屏”）。
+- 触控目标：按钮/列表项最小高度 44px；不要用过小 icon-only 动作承载关键功能。
+- 弹层：`Dialog/Sheet` 统一焦点管理；关闭回到触发点。
+- 文案：遵循 1+1+1；任何提示必须包含下一步动作。
+
+---
+
+## Step 14 - Complete
+
+### Workflow Completion
+
+**UX Design Specification 已完成（Step 14）**，该文档现在可直接用于：
+- 指导 UI 细化（页面/组件级落地）
+- 指导开发实现（组件策略 + 一致性模式 + 响应式/A11y 验收条款）
+- 支持后续的架构与拆故事（把 UX 约束带入技术方案与验收标准）
+
+**Supporting Visual Assets**
+- 方向预览：`docs/ux-design-directions.html`
+
+### Document Quality Check（快速校验清单）
+- 核心链路是否可完成：导出永可完成（复制/下载/全选兜底）
+- 一致性是否可执行：按钮层级、反馈、表单校验、弹层/空状态均有统一规则
+- 可访问性是否可验收：WCAG AA、键盘可用、焦点可见、暗色输入可读
+
+### Suggested Next Workflows
+- 下一步推荐进入 **`create-architecture`**（把工作台分栏、离线存储、导入导出、事件口径等约束落到架构决策）。
+- 随后运行 **`create-epics-and-stories`** 把主路径与不可失败时刻拆成可实现故事。
