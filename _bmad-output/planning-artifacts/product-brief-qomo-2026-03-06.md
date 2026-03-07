@@ -1,17 +1,4 @@
----
-stepsCompleted: [1, 2, 3, 4, 5, 6]
-inputDocuments:
-  - _bmad-output/implementation-artifacts/tech-spec-qomo-2x-capability-prompt-workbench-quick-spec.md
-  - docs/analysis/product-brief-Qomo-2025-12-27.md
-  - docs/prd.md
-  - docs/project-planning-artifacts/architecture.md
-  - docs/ux-design-specification.md
-workflowType: 'product-brief'
-lastStep: 6
-project_name: 'qomo'
-user_name: 'Shizheng'
-date: '2026-03-06'
----
+## stepsCompleted: [1, 2, 3, 4, 5, 6]inputDocuments:- _bmad-output/implementation-artifacts/tech-spec-qomo-2x-capability-prompt-workbench-quick-spec.md- docs/analysis/product-brief-Qomo-2025-12-27.md- docs/prd.md- docs/project-planning-artifacts/architecture.md- docs/ux-design-specification.mdworkflowType: 'product-brief'lastStep: 6project_name: 'qomo'user_name: 'Shizheng'date: '2026-03-06'
 
 # Product Brief: qomo
 
@@ -47,11 +34,13 @@ Qomo 2.x 是 Qomo 在不替代 1.x 基线前提下的未来演进分支：它不
 Qomo 2.x 的解法，是把产品升级为一个围绕 Work Unit / Slot / Capability 的能力化 Prompt 工作台。
 
 其核心思路是：
+
 - Work Unit 成为用户真正保存、复用、启动的主对象，承载一个任务工作单元，而不只是 Prompt 文本
 - Slot 作为带类型的能力接口，用来接收任务描述、上下文、规则、输出要求与可挂载能力
 - Capability 作为可配置、可复用的能力块，用来承接 context、guardrail、preset 等内容
 
 在产品体验上：
+
 - Web 是设计台：负责设计、配置、预览、整理与管理 Work Unit
 - VS Code 是启动台：负责在任务现场快速调用已有 Work Unit，并补齐当前工作区上下文
 - 早期交付边界：先做生成型 + 辅助执行型，不做完整 Agent / MCP / Tool 编排平台
@@ -192,7 +181,7 @@ Qomo 2.x 的解法，是把产品升级为一个围绕 Work Unit / Slot / Capabi
 
 ### Core Features
 
-- **Web 设计台上的 `Work Unit` 最小闭环**
+- **Web 设计台上的 **`Work Unit`** 最小闭环**
   - 用户可以在 Web 端创建、编辑、预览、整理与复用 `Work Unit`
   - `Work Unit` 至少能承载任务目标、上下文输入、边界约束、输出要求与可复用能力块
   - `Slot / Capability` 在 MVP 中只收敛到“够表达任务启动结构”的最小边界，不展开为完整执行协议
