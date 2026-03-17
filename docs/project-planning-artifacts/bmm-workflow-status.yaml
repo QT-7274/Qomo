@@ -1,7 +1,8 @@
 # BMM Workflow Status
 #
-# This file tracks progress through BMM methodology Analysis, Planning, and Solutioning phases.
-# Implementation phase is tracked separately in sprint-status.yaml
+# This file is a lightweight index for BMM methodology Analysis, Planning, and Solutioning phases.
+# Implementation phase is tracked separately in sprint-status.yaml.
+# Workspace-native spec remains the source of truth; file paths here are carrier/index references only.
 #
 # STATUS DEFINITIONS:
 # ==================
@@ -16,29 +17,42 @@
 #   - skipped: Optional/conditional workflow that was skipped
 
 generated: "2025-12-27"
-updated: "2026-02-07"
+updated: "2026-03-11"
 project: "Qomo"
 project_type: "web-app"
 project_level: "intermediate"
 selected_track: "method"
 field_type: "greenfield"
-workflow_path: "_bmad/bmm/workflows/workflow-status/paths/method-greenfield.yaml"
+
+# Legacy workflow_path removed: the previously recorded path is stale and must not be used for routing.
+# Use workflow_status ordering below, with workspace-native spec as the authority for actual workflow content.
 
 # workflow_status is an ordered list (YAML mapping order matters):
 # the first item that is not a file path and not 'skipped' becomes the NEXT workflow.
+# File-path entries may point at validated carrier documents; they do not supersede the workspace-native spec.
 workflow_status:
   # Discovery (Optional) — you chose greenfield; BMad Master defaulted to include Product Brief
   product-brief: docs/analysis/product-brief-Qomo-2025-12-27.md
 
   # Planning
   prd: docs/prd.md
+  # Legacy UX artifact retained for continuity/reference only; not current 2.x UX authority.
   create-ux-design: docs/ux-design-specification.md
 
   # Solutioning
+  # Legacy architecture artifact retained for continuity/reference only; not current 2.x architecture authority.
   create-architecture: docs/project-planning-artifacts/architecture.md
-  create-epics-and-stories: required
-  test-design: recommended
-  validate-architecture: optional
+  # Wave 2/3 epic+story baselines are carried in the product brief appendices; spec remains authoritative.
+  create-epics-and-stories: docs/analysis/product-brief-Qomo-2025-12-27.md
+  # Deferred out of the current gating path so it does not block implementation-readiness inference.
+  test-design: skipped
+  # validate-architecture points at the same legacy carrier and does not elevate it above spec + formal inputs.
+  validate-architecture: docs/project-planning-artifacts/architecture.md
+  # implementation-readiness is gated by workspace-native spec + formal inputs; this file remains index-only.
+  # Carrier summary entry: product brief appendix "implementation-readiness 正式输入、边界与继承护栏（2026-03-09）".
+  # That appendix now opens with a reusable delivery package for the next workflow / owner / verifier,
+  # then carries the readiness checklist, blocking conditions, dependency/order, entry criteria,
+  # and guardrails. This YAML remains index-only and must not override spec + formal inputs.
   implementation-readiness: required
 
   # Implementation
