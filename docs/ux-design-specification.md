@@ -15,6 +15,11 @@ date: '2025-12-29'
 **Author:** drogbaqu
 **Date:** 2025-12-29
 
+> **Legacy / reference-only notice（Wave A authority convergence, 2026-03-11）**
+> 本文档基于 `docs/prd.md` 与当时的 `docs/analysis/product-brief-Qomo-2025-12-27.md` 生成，当前只保留为 **reference-only / legacy UX artifact**，不得表述为当前 2.x UX authority。
+> 当前 2.x authority 以 workspace-native `spec` 为协同权威源，并以 `_bmad-output/planning-artifacts/prd.md` → `_bmad-output/prd-handoff-to-design.md` 为 formal inputs；`docs/analysis/product-brief-Qomo-2025-12-27.md` 仅作 validated carrier。
+> 因此，本文中偏向 `模板 / 模块 / 约束包` 与 Web-only 导出工作台的叙述，只能用于 continuity / migration / terminology / export fallback 参考，不得覆盖当前 2.x 的 `Work Unit / Slot / Capability` 与 `Web 设计 → VS Code 启动 → 外部 AI 交付` 基线。
+
 ---
 
 ## Step 2 - Project Understanding（共识基线）

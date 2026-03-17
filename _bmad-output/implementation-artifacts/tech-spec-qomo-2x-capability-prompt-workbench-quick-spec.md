@@ -1,14 +1,4 @@
----
-title: 'Qomo 2.x 能力化 Prompt 工作台 quick-spec'
-slug: 'qomo-2x-capability-prompt-workbench-quick-spec'
-created: '2026-03-06'
-status: 'ready-for-dev'
-stepsCompleted: [1, 2, 3, 4]
-tech_stack: ['Markdown', 'React', 'TypeScript', 'Vite', 'BMAD planning docs']
-files_to_modify: ['_bmad-output/implementation-artifacts/tech-spec-qomo-2x-capability-prompt-workbench-quick-spec.md', 'docs/analysis/product-brief-Qomo-2025-12-27.md']
-code_patterns: ['现有 BMAD 产物通过 Markdown 文档沉淀，使用 frontmatter 标记步骤状态', '未来演进探索以追加附录或新增规划段落的方式记录，不直接覆盖当前 PRD/UX/Architecture 基线', 'Web 产品当前基线是 React + Vite + TypeScript 的单体前端应用，规划文档强调离线优先与边界明确']
-test_patterns: ['本任务为文档收敛，不涉及自动化测试；验证方式是跨文档一致性与约束对齐检查']
----
+## title: 'Qomo 2.x 能力化 Prompt 工作台 quick-spec'slug: 'qomo-2x-capability-prompt-workbench-quick-spec'created: '2026-03-06'status: 'ready-for-dev'stepsCompleted: [1, 2, 3, 4]tech_stack: ['Markdown', 'React', 'TypeScript', 'Vite', 'BMAD planning docs']files_to_modify: ['_bmad-output/implementation-artifacts/tech-spec-qomo-2x-capability-prompt-workbench-quick-spec.md', 'docs/analysis/product-brief-Qomo-2025-12-27.md']code_patterns: ['现有 BMAD 产物通过 Markdown 文档沉淀，使用 frontmatter 标记步骤状态', '未来演进探索以追加附录或新增规划段落的方式记录，不直接覆盖当前 PRD/UX/Architecture 基线', 'Web 产品当前基线是 React + Vite + TypeScript 的单体前端应用，规划文档强调离线优先与边界明确']test_patterns: ['本任务为文档收敛，不涉及自动化测试；验证方式是跨文档一致性与约束对齐检查']
 
 # Tech-Spec: Qomo 2.x 能力化 Prompt 工作台 quick-spec
 
@@ -27,6 +17,7 @@ Qomo 需要在不替代当前 1.x PRD / UX / Architecture / MVP 基线的前提�
 ### Scope
 
 **In Scope:**
+
 - 方向 C 与方向 B 的主次关系或组合方式
 - 首批目标用户定义
 - 2-3 个高价值场景优先级
@@ -36,6 +27,7 @@ Qomo 需要在不替代当前 1.x PRD / UX / Architecture / MVP 基线的前提�
 - 少量待验证问题与下一步 BMAD 建议
 
 **Out of Scope:**
+
 - 编码、原型实现、技术 Spike
 - 完整 Agent / MCP / Tool 编排协议设计
 - 团队协作权限系统、模型直连、商业化与定价
@@ -54,11 +46,11 @@ Qomo 需要在不替代当前 1.x PRD / UX / Architecture / MVP 基线的前提�
 ### Files to Reference
 
 | File | Purpose |
-| ---- | ------- |
-| `_bmad-output/implementation-artifacts/tech-spec-qomo-2x-capability-prompt-workbench-quick-spec.md` | 本轮 quick-spec workflow 的最终 spec 载体 |
-| `docs/analysis/product-brief-Qomo-2025-12-27.md` | 本轮未来演进探索的主输入与 quick-spec 收敛落点 |
-| `docs/prd.md` | 当前 Qomo 1.x 产品基线，明确 1.x 叙事与非目标 |
-| `docs/project-planning-artifacts/architecture.md` | 当前 Web 架构基线与宿主边界，防止未来叙事误覆盖现有实现基线 |
+| --- | --- |
+| _bmad-output/implementation-artifacts/tech-spec-qomo-2x-capability-prompt-workbench-quick-spec.md | 本轮 quick-spec workflow 的最终 spec 载体 |
+| docs/analysis/product-brief-Qomo-2025-12-27.md | 本轮未来演进探索的主输入与 quick-spec 收敛落点 |
+| docs/prd.md | 当前 Qomo 1.x 产品基线，明确 1.x 叙事与非目标 |
+| docs/project-planning-artifacts/architecture.md | 当前 Web 架构基线与宿主边界，防止未来叙事误覆盖现有实现基线 |
 
 ### Technical Decisions
 
@@ -75,17 +67,14 @@ Qomo 需要在不替代当前 1.x PRD / UX / Architecture / MVP 基线的前提�
   - File: `docs/analysis/product-brief-Qomo-2025-12-27.md`
   - Action: 追加一个新的 quick-spec 结果章节，明确核心问题陈述、关键决策、少量待验证问题，以及建议下一步 BMAD 流程。
   - Notes: 必须显式声明该结果属于未来演进探索，不替代当前 Qomo 1.x PRD / UX / Architecture / MVP 基线。
-
 - [ ] Task 2: 固化方向 C / B、目标用户、首批场景与对象模型最小边界
   - File: `docs/analysis/product-brief-Qomo-2025-12-27.md`
   - Action: 用决策性表述写清“C 为主线，B 为验证视角”“首批服务高频 AI 编码工作流用户”“优先场景为任务启动 / 代码审查 / 调试排障”“对象模型最小边界为 Work Unit / Slot / Capability”。
   - Notes: 只收敛产品层边界，不延展为完整 Agent / Tool / MCP 编排模型。
-
 - [ ] Task 3: 固化 Web / VS Code 分工与 `Qomo 1.x → 2.x` 过渡叙事
   - File: `docs/analysis/product-brief-Qomo-2025-12-27.md`
   - Action: 明确 Web 是设计台、VS Code 是启动台；同时给出 1.x 到 2.x 的兼容映射与阶段性边界表述。
   - Notes: 需要同时保留连续性与升级感，避免把 2.x 讲成“已是完整执行平台”。
-
 - [ ] Task 4: 维护 workflow spec 作为内部追踪载体
   - File: `_bmad-output/implementation-artifacts/tech-spec-qomo-2x-capability-prompt-workbench-quick-spec.md`
   - Action: 记录本轮 quick-spec 的范围、上下文、验收标准与评审状态，作为 workflow 执行痕迹。

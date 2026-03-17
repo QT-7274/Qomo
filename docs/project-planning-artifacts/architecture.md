@@ -12,16 +12,18 @@ date: '2026-02-03'
 status: 'complete'
 completedAt: '2026-02-07'
 ---
-
 # Architecture Decision Document
 
-_This document builds collaboratively through step-by-step discovery. Sections are appended as we work through each architectural decision together._
+*This document builds collaboratively through step-by-step discovery. Sections are appended as we work through each architectural decision together.*
+
+> Legacy / reference-only notice（Wave A authority convergence, 2026-03-11）本文档基于 docs/prd.md、docs/ux-design-specification.md 与当时的分析载体生成，当前只保留为 reference-only / legacy architecture artifact，不得表述为当前 2.x architecture authority。当前 2.x authority 以 workspace-native spec 为协同权威源，并以 _bmad-output/planning-artifacts/prd.md → _bmad-output/prd-handoff-to-design.md 为 formal inputs；docs/analysis/product-brief-Qomo-2025-12-27.md 仅作 validated carrier。因此，本文中围绕 模板 / 模块 / 约束包、Web-only 工作台、或“本地是唯一事实源（source of truth）”的旧口径，只能用于 continuity / migration / terminology 参考；它们不得覆盖当前 2.x 的 Work Unit / Slot / Capability、Web 设计 → VS Code 启动 → 外部 AI 交付，也不得覆盖 VS Code 为 runtime 事实源的边界。
 
 ## Project Context Analysis
 
 ### Requirements Overview
 
 **Functional Requirements（架构含义）**
+
 - **模板驱动的生成工作台**：围绕“模板/变量/约束包/预览/导出”的主链路组织信息架构与页面结构；实现上需要清晰的领域模型与 UI 状态边界，避免把业务规则散落在组件里。
 - **资产模型（Templates / Modules / Constraint Packs）**
   - 资产需要可维护（创建/编辑/删除/标签/搜索/收藏/最近/历史组合）。
@@ -41,6 +43,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
   - 设置中可关闭遥测、重置匿名标识、查看事件清单。
 
 **Non-Functional Requirements（驱动架构决策的硬约束）**
+
 - **可靠性（零失败目标）**
   - 系统侧 `export_error/copy_error` 目标为 0；失败必须可观测、可定位、可回归。
   - `export_denied` 不算系统 bug，但必须保证用户仍可完成导出。
@@ -59,6 +62,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
   - 小屏不追求同等效率，但核心链路必须可完成（打开模板→填必填→预览→导出）。
 
 **Scale & Complexity**
+
 - Primary domain: Offline-first Web SPA workbench
 - Complexity level: Medium
 - Architectural building blocks (high-level):
@@ -112,7 +116,6 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 - **适配点**
   - KV 的 `get/put/delete/list` 模型与“低频写入、按资产粒度读写”的模板备份较匹配。
   - 最终一致性对“备份/恢复”可接受（但不适合强一致协作）。
-
 - **边界与应对**
   - **最终一致性（可能有同步延迟）**：将远端 KV 定位为“备份/同步”，而非“打开即最新”的单一事实源；UI 需要给出同步状态（例如：最近一次同步时间/是否有待同步更改）。
   - **无实时协作假设**：不同浏览器/设备并发修改时，采用可解释的冲突策略。
@@ -122,15 +125,12 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 - **数据分层**
   - **本地**：资产的主存储（离线可用、可迁移）。
   - **远端 KV**：仅同步“用户显式保存”的资产与必要索引（例如：模板列表元数据 + 模板内容）。
-
 - **对象粒度与键设计（建议）**
   - 以“单个资产”为写入单位（例如：`template/{id}`），避免大对象频繁全量覆盖。
   - 元数据索引单独存放（例如：`index/templates`），用于加速远端恢复。
-
 - **冲突策略（建议）**
   - 默认 **Last-Write-Wins**（以 `updatedAt` + `deviceId` 做判定），并在冲突发生时保留“副本”而非静默覆盖（符合“安全策略优先”）。
   - 远端仅用于恢复/同步，不引入复杂的 CRDT/OT。
-
 - **隐私与权限（建议）**
   - 若未来需要“跨浏览器同步但不做账号系统”，建议提供 **用户自持的同步口令/同步码**，让不同浏览器加入同一同步空间；同步数据可选端到端加密，避免把可识别内容以明文落在远端。
 
@@ -166,7 +166,6 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 - **EdgeOne Pages KV：备份/同步层**（最终一致性；明确不做实时协作）
   - 同步对象：仅同步“用户显式保存”的资产与必要索引；避免把临时草稿当作必须同步的数据。
   - UI 侧必须可观测：至少展示“是否有待同步更改 / 最近同步时间”。
-
 - **E2EE（端到端加密，无后端账号体系）**
   - 用户提供 **同步口令/同步码** 用于在不同浏览器加入同一同步空间。
   - 前端使用 WebCrypto 进行密钥派生与加密后再写入 KV：
@@ -174,7 +173,6 @@ _This document builds collaboratively through step-by-step discovery. Sections a
     - Cipher：AES-GCM
     - KV 只存储：加密 blob + 最小必要元数据（如 `salt`、`kdfParams`、`keyVersion`、`updatedAt`、`deviceId`）
   - 明确失败模式：口令错误/解密失败必须“可检测 + 可解释 + 不破坏本地数据”；口令遗失的恢复策略以“资产包导出”作为恢复锚点（不承诺服务端找回）。
-
 - **冲突处理（安全优先）**
   - 默认策略：LWW（Last-Write-Wins，以 `updatedAt` + `deviceId` 作为判定/兜底）
   - 冲突发生时：保留“副本”而非静默覆盖，符合导入冲突策略的安全取向。
@@ -201,6 +199,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 - **Utils/Helpers（纯函数）**：放在 `src/utils/`，命名 `*Util*.ts` / `*Helper*.ts`
 
 **分层硬约束（MUST）**
+
 - 组件层（`src/components/*`）不得直接访问 Dexie / KV / Telemetry，必须通过 `src/services/*`。
 - `src/utils/*` 必须是纯函数（不得读写存储/网络/全局状态）。
 
@@ -216,28 +215,34 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 ### 3) Dexie（本地唯一事实源）一致性规则
 
 **表名固定（不得变体）**
+
 - `templates` / `modules` / `constraintPacks` / `compositions` / `exportRecords` / `appMeta`
 
 **所有资产对象最小字段集合（固定）**
+
 - `id: string`
 - `createdAt: string`（ISO 8601）
 - `updatedAt: string`（ISO 8601）
 
 **版本字段（固定）**
+
 - 本地：`dbSchemaVersion`
 - 资产包：`exportSchemaVersion`
 
 **写入边界（MUST）**
+
 - “保存为资产”的写入必须走服务层（`src/services/*Service.ts`）并在 Dexie 事务里完成。
 - 远端 KV 不得作为写入事实源（只允许备份/同步）。
 
 ### 4) 资产包导入导出（Import/Export）一致性规则
 
 **资产包顶层结构（固定）**
+
 - 必须包含：`exportSchemaVersion`、`createdAt`、`items`
 - `items` 的组织方式（按类型分组 or 统一列表）全项目只能选一种并保持一致。
 
 **最小示例（按类型分组）**
+
 ```json
 {
   "exportSchemaVersion": 1,
@@ -252,73 +257,86 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 ```
 
 **导入流程（MUST）**
-1) Zod 校验（结构合法）
-2) 冲突检测
-3) 用户选择策略：合并 / 覆盖 / 新建副本
-4) Dexie 事务落库
-5) 生成导入报告 + 支持撤销本次导入（与 UX 文档一致）
+
+1. Zod 校验（结构合法）
+2. 冲突检测
+3. 用户选择策略：合并 / 覆盖 / 新建副本
+4. Dexie 事务落库
+5. 生成导入报告 + 支持撤销本次导入（与 UX 文档一致）
 
 ### 5) Telemetry（一致口径 + 隐私红线）
 
 **事件上报唯一入口（MUST）**
+
 - 统一：`telemetryService.track(eventName, payload)`
 - `payload` 必须先通过 Zod allowlist（白名单 schema）过滤
 
 **隐私红线（MUST NOT）**
+
 - 不上传 Prompt 原文
 - 不上传模板/模块明文内容
 - 不上传可识别个人信息
 
 **去重口径（固定）**
+
 - `dedup_window_seconds = 30`
 - 规范化函数必须唯一（例如 `normalizeTextForHash()`），集中在 `src/utils/`，禁止多份实现。
 
 ### 6) 导出“永可完成”（Export Completion Layer）
 
 **统一承载点（MUST）**
+
 - UI：`ExportActionPanelComponent.tsx`（或 `export-action-panel.component.tsx`），对外暴露统一的导出面板交互
 - 动作与异常分类：`ExportService.ts`（负责 copy/download/select-all 的实现与错误分类）
 
 **错误分类硬约束（MUST）**
+
 - `export_denied`（权限/策略拒绝）：同屏解释 + 直接给可完成路径（下载 `.txt` / 全选兜底）
 - `copy_error` / `export_error`（系统异常）：同屏解释 + 仍给可完成路径（下载/全选），且不得清空预览/表单
 
 ### 7) E2EE + KV 同步一致性规则（跨浏览器备份/同步）
 
 **KV 存储边界（MUST）**
+
 - KV 只允许存：加密 blob + 最小元数据；不得存模板名/标签等可识别明文元数据。
 
 **加密与编码（固定）**
+
 - KDF：PBKDF2（`salt`、`iterations`、`hash`）
 - Cipher：AES-GCM
 - KV 中二进制字段统一使用 **base64url** 编码字符串（避免 hex/base64 混用导致不可互通）
 
 **元数据字段命名（固定）**
+
 - `salt`、`kdfParams`、`keyVersion`、`updatedAt`、`deviceId`
 
 **解密失败处理（MUST）**
+
 - 必须可检测并明确提示（口令错误/数据损坏）
 - 同步失败不得覆盖/删除本地资产（本地仍是唯一事实源）
 
 **冲突处理（固定）**
+
 - 默认 LWW：`updatedAt` + `deviceId`
 - 冲突时保留副本（安全优先，与导入策略一致）
 
 ### 8) 执行与验收（Enforcement）
 
 **所有 AI 代理 MUST**
+
 - 遵守目录分层边界（组件不直连存储/网络）
 - 遵守 Telemetry 白名单与隐私红线
 - 遵守 E2EE 编码/字段命名/失败模式处理
 
 **测试目录约定（提前固化，避免分叉）**
+
 - 单测/集成测试统一放 `tests/`（命名 `*.test.ts(x)` / `*.spec.ts(x)`），与 `docs/mault.yaml` 保持一致。
 
 ## 项目结构与边界（Project Structure & Boundaries）
 
 ### Complete Project Directory Structure
 
-> 说明：这里定义的是“目标态与新增文件落点”，不会强制你现在就重命名/重排已有文件；现有结构可逐步迁移。新增文件建议遵循 `docs/mault.yaml` 的命名与落盘规则（如 `*Service.ts`、`use*.ts`、`*.types.ts`）。
+> 说明：这里定义的是“目标态与新增文件落点”，不会强制你现在就重命名/重排已有文件；现有结构可逐步迁移。新增文件建议遵循 docs/mault.yaml 的命名与落盘规则（如 *Service.ts、use*.ts、*.types.ts）。
 
 ```text
 Qomo/
@@ -389,19 +407,16 @@ Qomo/
 
 ### Route Table（固定路由表）
 
-- **`/`**
+- `/`
   - Component: `WorkbenchComponent.tsx`
   - Responsibility: 模板选择 → 填写 → 预览 → 导出（核心主链路）
-
-- **`/assets`**
+- `/assets`
   - Component: `AssetsComponent.tsx`
   - Responsibility: 资产管理入口（模板/模块/约束包）
   - Note: 导入/导出等长流程以弹层组件完成（如 `ImportWizardComponent.tsx`），避免路由化导致状态丢失。
-
-- **`/settings`**
+- `/settings`
   - Component: `SettingsComponent.tsx`
   - Responsibility: 隐私与数据（遥测开关/重置匿名标识/事件清单）、同步口令/同步状态、恢复入口
-
 - **可选二级路由（用于可发现性，不承载长流程状态）**
   - `/settings/privacy`、`/settings/sync`
   - `/assets/import`（仅定位入口，流程仍由 `ImportWizard` 弹层完成）
@@ -409,15 +424,18 @@ Qomo/
 ### Architectural Boundaries
 
 **UI / Routing Boundaries**
+
 - 路由负责“页面级导航与可恢复入口”，不承载长流程状态。
 - 路由切换不得隐式清空工作台草稿/预览（避免“切设置就丢状态”）。
 
 **Modal/Panel Boundaries（必须是组件，不是路由）**
+
 - `ExportActionPanelComponent.tsx`：导出“永可完成”的交互与状态机收敛点。
 - `ImportWizardComponent.tsx`：预检 → 冲突策略 → 执行 → 报告/撤销（长流程，需要保持状态）。
 - `CommandCenterComponent.tsx`：命令中心（快捷动作/搜索）。
 
 **Service Boundaries（与 Step 5 一致）**
+
 - Dexie：`StorageService.ts` 为唯一入口（本地事实源）。
 - 资产包导入导出：`ImportExportService.ts`（Zod 校验 → 冲突策略 → 事务落库 → 报告/撤销）。
 - 导出动作：`ExportService.ts`（copy/download/select-all + 错误分类）。
@@ -429,25 +447,20 @@ Qomo/
 - **模板库（最近/收藏/搜索）**
   - UI: `TemplateSidebar`（位于 `WorkbenchComponent.tsx` 或拆分为独立组件）
   - Service: `StorageService.ts`
-
 - **主链路（填变量 → 预览）**
   - UI: `WorkbenchComponent.tsx`
   - Utils: `normalizeTextForHashUtil.ts`（去重口径与 hash 规范化唯一实现）
-
 - **导出永可完成（复制/下载/全选兜底）**
   - UI: `ExportActionPanelComponent.tsx`
   - Service: `ExportService.ts`
-
 - **资产包导入/导出（报告 + 撤销）**
   - UI: `ImportWizardComponent.tsx`
   - Service: `ImportExportService.ts`
   - Types: `assetPack.types.ts`
-
 - **跨浏览器备份/同步（KV + E2EE）**
   - UI: `SettingsComponent.tsx`（同步口令/状态展示入口）
   - Service: `SyncService.ts`
   - Utils: `cryptoUtil.ts`
-
 - **隐私与可控（关闭遥测/重置匿名标识/事件清单）**
   - UI: `SettingsComponent.tsx`
   - Services: `TelemetryService.ts` + `StorageService.ts`
@@ -506,7 +519,4 @@ Qomo/
 2. 下一工作流建议进入：`create-epics-and-stories`，把 PRD/UX 拆成可给 AI 执行的故事（按路由与服务边界落点）。
 3. 实现优先级建议从“本地事实源 + 工作台主链路 + 导出永可完成”开始；KV 同步按增强项逐步接入。
 
----
-
 **Architecture Status**：READY FOR IMPLEMENTATION ✅
-
