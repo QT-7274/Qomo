@@ -17,7 +17,7 @@
 #   - skipped: Optional/conditional workflow that was skipped
 
 generated: "2025-12-27"
-updated: "2026-03-11"
+updated: "2026-03-19"
 project: "Qomo"
 project_type: "web-app"
 project_level: "intermediate"
@@ -49,11 +49,15 @@ workflow_status:
   # validate-architecture points at the same legacy carrier and does not elevate it above spec + formal inputs.
   validate-architecture: docs/project-planning-artifacts/architecture.md
   # implementation-readiness is gated by workspace-native spec + formal inputs; this file remains index-only.
-  # Carrier summary entry: product brief appendix "implementation-readiness 正式输入、边界与继承护栏（2026-03-09）".
-  # That appendix now opens with a reusable delivery package for the next workflow / owner / verifier,
-  # then carries the readiness checklist, blocking conditions, dependency/order, entry criteria,
-  # and guardrails. This YAML remains index-only and must not override spec + formal inputs.
-  implementation-readiness: required
+  # Base assessment: `_bmad-output/planning-artifacts/implementation-readiness-report-2026-03-09.md`.
+  # Follow-up carrier patches: `docs/analysis/product-brief-Qomo-2025-12-27.md` Wave A / Wave B / Wave B-2 (2026-03-11).
+  # `docs/project-planning-artifacts/implementation-readiness-report-2026-03-19.md` now records
+  # the explicit adoption of `FR28`, `FR71`, `FR72` and a final Wave C verifier `PASS`.
+  # Therefore implementation-readiness is now resolved to this report artifact,
+  # and sprint-planning becomes the next workflow in ordered routing.
+  # This YAML remains index-only and must not override spec + formal inputs.
+  implementation-readiness: docs/project-planning-artifacts/implementation-readiness-report-2026-03-19.md
 
   # Implementation
-  sprint-planning: required
+  # Sprint planning completed from the current validated epic/story carrier and generated sprint-status.yaml.
+  sprint-planning: docs/implementation-artifacts/sprint-status.yaml

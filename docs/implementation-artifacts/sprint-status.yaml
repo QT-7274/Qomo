@@ -1,0 +1,81 @@
+# generated: 2026-03-19
+# project: Qomo
+# project_key: qomo
+# tracking_system: file-system
+# story_location: docs/implementation-artifacts
+# epic_source: docs/analysis/product-brief-Qomo-2025-12-27.md
+# epic_source_notes: create-epics-and-stories Wave 2/3 baseline + Wave B split story slices
+#
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic baseline
+#   - ready-for-dev: Story file created in implementation artifacts
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - This file is generated from the current validated epic/story carrier because no standalone epic*.md files exist yet.
+# - Backbone is tracked as the "+1" structure entry; B0-3 remains a global guardrail, not a plannable story.
+# - No story markdown files exist yet in docs/implementation-artifacts, so all stories default to backlog.
+
+generated: '2026-03-19'
+project: 'Qomo'
+project_key: 'qomo'
+tracking_system: 'file-system'
+story_location: 'docs/implementation-artifacts'
+
+development_status:
+  epic-b0: backlog
+  b0-1-unified-object-identity-version-lineage-references: backlog
+  b0-2-unified-decision-writeback-observation-vocabulary: backlog
+  epic-b0-retrospective: optional
+
+  epic-1: backlog
+  w1-continue-governance-entry: backlog
+  w2a-work-unit-core-structure-declaration: backlog
+  w2b-constraint-and-output-semantics-declaration: backlog
+  w2c-runtime-fill-ins-semantics-declaration: backlog
+  w3-handoff-readiness-preview: backlog
+  w4-versioned-snapshot-and-editing-continuity: backlog
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  v1-launch-entry-and-object-selection: backlog
+  v2-runtime-context-completion: backlog
+  v3a-capability-availability-overview: backlog
+  v3b-blocking-issue-explanation: backlog
+  v3c-ambiguous-candidate-explanation: backlog
+  v4-user-decision-and-degradation-paths: backlog
+  v5-structured-handoff-and-fallback: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  m1-legacy-source-selection-and-migration-preview: backlog
+  m2-unresolved-ambiguous-mapping-confirmation: backlog
+  m3-migration-landing-and-migration-record: backlog
+  epic-3-retrospective: optional
+
+  epic-4: backlog
+  o1-launch-minimum-writeback-summary: backlog
+  o2-return-to-web-revision-continuity: backlog
+  o3-history-review-and-relaunch-cues: backlog
+  o4a-reuse-validation-observation-slice: backlog
+  o4b-handoff-completion-validation-observation-slice: backlog
+  o4c-return-to-web-revision-validation-observation-slice: backlog
+  epic-4-retrospective: optional
