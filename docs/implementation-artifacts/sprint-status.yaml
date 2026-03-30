@@ -44,7 +44,7 @@ last_updated: '2026-03-30'
 
 development_status:
   epic-b0: in-progress
-  b0-1-unified-object-identity-version-lineage-references: review
+  b0-1-unified-object-identity-version-lineage-references: done
   b0-2-unified-decision-writeback-observation-vocabulary: backlog
   epic-b0-retrospective: optional
 

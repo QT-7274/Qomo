@@ -84,7 +84,7 @@ describe('workUnitSnapshotHelper - Lineage Creation', () => {
   it('should create restored lineage from history version', () => {
     const lineage = createRestoredLineage('wu_original_001', '1.0.0', 'wu_restored_002');
 
-    expect(lineage.sourceType).toBe('cloned_from');
+    expect(lineage.sourceType).toBe('restored_from');
     expect(lineage.sourceWorkUnitId).toBe('wu_original_001');
     expect(lineage.lineagePath).toHaveLength(1);
     expect(lineage.lineagePath[0].action).toBe('restored');

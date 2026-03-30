@@ -1,6 +1,6 @@
 # Story B0.1: 统一对象身份、版本与谱系引用语义
 
-Status: review
+Status: done
 
 ## Story
 

@@ -4,7 +4,7 @@
  * B0.1 任务 2：创建、归一化、格式化 identity / version / lineage 引用。
  *
  * 本文件只处理前端域语义，不引入 backend / persistence / API 假设。
- * 支持两类谱系表达：复制、历史恢复。
+ * 支持三类谱系表达：复制、历史恢复、全新创建。
  */
 
 import type {
@@ -12,24 +12,27 @@ import type {
   SnapshotIdentity,
   LineageReference,
   WorkUnitSnapshot,
+  BuildSnapshotParams,
   ISO8601,
 } from '../types/workUnit.types';
 
 // ---------------------------------------------------------------------------
-// ID 生成（轻量级，无外部依赖）
+// ID 生成
 // ---------------------------------------------------------------------------
-
-let counter = 0;
 
 /**
  * 生成唯一 ID。
- * 使用 timestamp + random + counter 组合，无需引入 uuid / nanoid 依赖。
+ * 优先使用 crypto.randomUUID()（所有现代浏览器支持），
+ * 降级为 timestamp + random 组合。
  */
 function generateId(prefix: string): string {
-  counter += 1;
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `${prefix}_${crypto.randomUUID()}`;
+  }
+  // 降级方案
   const ts = Date.now().toString(36);
-  const rand = Math.random().toString(36).slice(2, 8);
-  return `${prefix}_${ts}_${rand}_${counter}`;
+  const rand = Math.random().toString(36).slice(2, 8).padEnd(6, '0');
+  return `${prefix}_${ts}_${rand}`;
 }
 
 /** 获取当前 ISO 8601 时间戳 */
@@ -150,7 +153,7 @@ export function createRestoredLineage(
   newWorkUnitId: string,
 ): LineageReference {
   return {
-    sourceType: 'cloned_from',
+    sourceType: 'restored_from',
     sourceWorkUnitId,
     lineagePath: [
       {
@@ -167,13 +170,6 @@ export function createRestoredLineage(
 // 组合构建器
 // ---------------------------------------------------------------------------
 
-/** buildWorkUnitSnapshot 的参数 */
-export interface BuildSnapshotParams {
-  name: string;
-  description?: string;
-  contentHash: string;
-}
-
 /**
  * 一步构建完整的全新 WorkUnitSnapshot。
  * 自动创建 identity、初始版本 snapshot 和 fresh lineage。
@@ -182,9 +178,10 @@ export function buildWorkUnitSnapshot(
   params: BuildSnapshotParams,
 ): WorkUnitSnapshot {
   const identity = createWorkUnitIdentity(params.name, params.description);
+  const version = params.initialVersion ?? '1.0.0';
   const snapshot = createSnapshotIdentity(
     identity.workUnitId,
-    '1.0.0',
+    version,
     params.contentHash,
   );
   const lineage = createFreshLineage();

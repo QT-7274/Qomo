@@ -7,4 +7,5 @@ export type {
   LineageEntry,
   LineageReference,
   WorkUnitSnapshot,
+  BuildSnapshotParams,
 } from './workUnit.types';

@@ -53,8 +53,8 @@ export function WorkUnitSnapshotIdentityCard({
           <div style={pathContainerStyle}>
             <span style={labelStyle}>谱系路径：</span>
             <ul style={pathListStyle}>
-              {lineage.lineagePath.map((entry, i) => (
-                <li key={i} style={pathItemStyle}>
+              {lineage.lineagePath.map((entry) => (
+                <li key={`${entry.workUnitId}-${entry.action}-${entry.timestamp}`} style={pathItemStyle}>
                   <span style={monoStyle}>{entry.workUnitId}</span>
                   {' v' + entry.versionNumber}
                   {' — '}
@@ -115,17 +115,18 @@ function Field({
 // ---------------------------------------------------------------------------
 
 function formatTime(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString('zh-CN');
-  } catch {
-    return iso;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) {
+    return iso || '—';
   }
+  return d.toLocaleString('zh-CN');
 }
 
 function sourceTypeLabel(type: string): string {
   const map: Record<string, string> = {
     created_new: '全新创建',
     cloned_from: '从其它 Work Unit 克隆',
+    restored_from: '从历史版本恢复',
   };
   return map[type] ?? type;
 }

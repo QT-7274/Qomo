@@ -30,7 +30,7 @@
 // ---------------------------------------------------------------------------
 
 /** 对象的来源类型 */
-export type SourceType = 'created_new' | 'cloned_from';
+export type SourceType = 'created_new' | 'cloned_from' | 'restored_from';
 
 /** 谱系路径中的操作类型 */
 export type LineageAction = 'created' | 'cloned' | 'restored';
@@ -129,17 +129,18 @@ export interface LineageEntry {
 /**
  * 谱系引用：完整描述一个 Work Unit 的来源与继承关系。
  *
- * 两种来源场景：
+ * 三种来源场景：
  * - created_new: 全新创建，无来源
  * - cloned_from: 从另一个 Work Unit 复制
+ * - restored_from: 从历史版本恢复
  */
 export interface LineageReference {
   /** 来源类型 */
   readonly sourceType: SourceType;
 
   /**
-   * 复制来源的 Work Unit ID。
-   * 仅 cloned_from 场景有值，created_new 时为 null。
+   * 复制/恢复来源的 Work Unit ID。
+   * cloned_from / restored_from 场景有值，created_new 时为 null。
    */
   readonly sourceWorkUnitId: string | null;
 
@@ -169,4 +170,17 @@ export interface WorkUnitSnapshot {
 
   /** 谱系引用：来源与继承追溯 */
   readonly lineage: LineageReference;
+}
+
+// ---------------------------------------------------------------------------
+// 构建参数
+// ---------------------------------------------------------------------------
+
+/** buildWorkUnitSnapshot 的参数 */
+export interface BuildSnapshotParams {
+  name: string;
+  description?: string;
+  contentHash: string;
+  /** 初始版本号，默认 '1.0.0' */
+  initialVersion?: string;
 }

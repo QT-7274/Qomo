@@ -8,6 +8,7 @@
  * 仅用于验证共享语义在 Web 端已可消费，不是正式设计台 UI。
  */
 
+import { useMemo } from 'react';
 import { WorkUnitSnapshotIdentityCard } from '../WorkUnitSnapshotIdentityCard';
 import {
   buildWorkUnitSnapshot,
@@ -19,39 +20,35 @@ import type { WorkUnitSnapshot } from '../../types/workUnit.types';
 import './App.css';
 
 // ---------------------------------------------------------------------------
-// 演示数据：两种谱系场景
-// ---------------------------------------------------------------------------
-
-/** 场景 1：全新创建 */
-const freshSnapshot = buildWorkUnitSnapshot({
-  name: '代码审查助手',
-  description: '用于辅助代码审查的 Prompt 工作单元',
-  contentHash: 'sha256_demo_fresh_001',
-});
-
-/** 场景 2：从已有 Work Unit 克隆 */
-function createClonedDemo(): WorkUnitSnapshot {
-  const sourceId = 'wu_source_demo_001';
-  const identity = createWorkUnitIdentity(
-    '代码审查助手（副本）',
-    '从「代码审查助手」克隆而来',
-  );
-  const snapshot = createSnapshotIdentity(
-    identity.workUnitId,
-    '1.0.0',
-    'sha256_demo_clone_001',
-  );
-  const lineage = createCloneLineage(sourceId, '2.1.0', identity.workUnitId);
-
-  return { identity, snapshot, lineage };
-}
-const clonedSnapshot = createClonedDemo();
-
-// ---------------------------------------------------------------------------
 // App
 // ---------------------------------------------------------------------------
 
 function App() {
+  const freshSnapshot = useMemo(
+    () =>
+      buildWorkUnitSnapshot({
+        name: '代码审查助手',
+        description: '用于辅助代码审查的 Prompt 工作单元',
+        contentHash: 'sha256_demo_fresh_001',
+      }),
+    [],
+  );
+
+  const clonedSnapshot = useMemo(() => {
+    const sourceId = 'wu_source_demo_001';
+    const identity = createWorkUnitIdentity(
+      '代码审查助手（副本）',
+      '从「代码审查助手」克隆而来',
+    );
+    const snapshot = createSnapshotIdentity(
+      identity.workUnitId,
+      '1.0.0',
+      'sha256_demo_clone_001',
+    );
+    const lineage = createCloneLineage(sourceId, '2.1.0', identity.workUnitId);
+    return { identity, snapshot, lineage } as WorkUnitSnapshot;
+  }, []);
+
   return (
     <div style={containerStyle}>
       <header style={headerStyle}>
