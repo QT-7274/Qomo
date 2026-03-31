@@ -228,4 +228,95 @@ describe('WorkUnitDetailComponent', () => {
       expect(updated!.slots[0].capabilities[1].name).toBe('A');
     });
   });
+
+  it('添加约束包', async () => {
+    const wu = await StorageService.createWorkUnit('约束测试');
+    renderDetail(wu.id);
+
+    await waitFor(() => {
+      expect(screen.getByText('+ 添加约束')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText('+ 添加约束'));
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('约束名称')).toBeTruthy();
+    });
+
+    fireEvent.change(screen.getByPlaceholderText('约束名称'), { target: { value: '输出规则' } });
+    fireEvent.change(screen.getByPlaceholderText('约束内容'), { target: { value: '使用 Markdown' } });
+    fireEvent.click(screen.getByText('确认添加约束'));
+
+    await waitFor(async () => {
+      const updated = await StorageService.getWorkUnit(wu.id);
+      expect(updated!.constraints).toHaveLength(1);
+      expect(updated!.constraints[0].name).toBe('输出规则');
+    });
+  });
+
+  it('删除约束包', async () => {
+    const wu = await StorageService.createWorkUnit('删约束');
+    await StorageService.addConstraint(wu.id, {
+      name: '待删约束',
+      constraintType: 'boundary',
+      content: '内容',
+    });
+
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    renderDetail(wu.id);
+
+    await waitFor(() => {
+      expect(screen.getByText('待删约束')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByLabelText('删除约束 待删约束'));
+
+    await waitFor(async () => {
+      const updated = await StorageService.getWorkUnit(wu.id);
+      expect(updated!.constraints).toHaveLength(0);
+    });
+
+    confirmSpy.mockRestore();
+  });
+
+  it('约束列表按类型显示标签', async () => {
+    const wu = await StorageService.createWorkUnit('约束标签');
+    await StorageService.addConstraint(wu.id, { name: '格式', constraintType: 'output', content: 'md' });
+    await StorageService.addConstraint(wu.id, { name: '边界', constraintType: 'boundary', content: 'no' });
+    await StorageService.addConstraint(wu.id, { name: '质量', constraintType: 'quality', content: 'check' });
+
+    renderDetail(wu.id);
+
+    await waitFor(() => {
+      expect(screen.getByText('格式')).toBeTruthy();
+      expect(screen.getByText('边界')).toBeTruthy();
+      expect(screen.getByText('质量')).toBeTruthy();
+    });
+
+    expect(screen.getByText('输出')).toBeTruthy();
+    expect(screen.getByText('边界规则')).toBeTruthy();
+    expect(screen.getByText('质量检查')).toBeTruthy();
+  });
+
+  it('约束包上移/下移', async () => {
+    const wu = await StorageService.createWorkUnit('约束排序');
+    await StorageService.addConstraint(wu.id, { name: 'A', constraintType: 'output', content: 'a' });
+    await StorageService.addConstraint(wu.id, { name: 'B', constraintType: 'boundary', content: 'b' });
+
+    renderDetail(wu.id);
+
+    await waitFor(() => {
+      expect(screen.getByText('A')).toBeTruthy();
+      expect(screen.getByText('B')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByLabelText('上移约束 B'));
+
+    await waitFor(async () => {
+      const updated = await StorageService.getWorkUnit(wu.id);
+      expect(updated!.constraints[0].name).toBe('B');
+      expect(updated!.constraints[1].name).toBe('A');
+    });
+  });
 });

@@ -9,7 +9,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useWorkUnitEditor } from '../../hooks/useWorkUnitEditor';
-import type { SlotType, Slot, Capability } from '../../types';
+import type { SlotType, Slot, Capability, ConstraintType, ConstraintPack } from '../../types';
 
 // ---------------------------------------------------------------------------
 // 常量
@@ -24,6 +24,14 @@ const slotTypeLabels: Record<SlotType, string> = {
 };
 
 const slotTypeOptions: SlotType[] = ['context', 'rule', 'output', 'capability', 'custom'];
+
+const constraintTypeLabels: Record<ConstraintType, string> = {
+  output: '输出',
+  boundary: '边界规则',
+  quality: '质量检查',
+};
+
+const constraintTypeOptions: ConstraintType[] = ['output', 'boundary', 'quality'];
 
 // ---------------------------------------------------------------------------
 // 组件
@@ -49,6 +57,12 @@ export function WorkUnitDetailComponent() {
   const [addCapSlotId, setAddCapSlotId] = useState<string | null>(null);
   const [newCapName, setNewCapName] = useState('');
   const [newCapContent, setNewCapContent] = useState('');
+
+  // 添加约束表单
+  const [showAddConstraint, setShowAddConstraint] = useState(false);
+  const [newConstraintName, setNewConstraintName] = useState('');
+  const [newConstraintType, setNewConstraintType] = useState<ConstraintType>('output');
+  const [newConstraintContent, setNewConstraintContent] = useState('');
 
   // ---------- 加载 / 错误 ----------
 
@@ -153,6 +167,40 @@ export function WorkUnitDetailComponent() {
   const handleClone = async () => {
     const newId = await editor.cloneWorkUnit();
     navigate(`/work-unit/${newId}`);
+  };
+
+  // ---------- 约束添加 ----------
+
+  const handleAddConstraint = async () => {
+    if (!newConstraintName.trim()) return;
+    await editor.addConstraint({
+      name: newConstraintName.trim(),
+      constraintType: newConstraintType,
+      content: newConstraintContent,
+    });
+    setNewConstraintName('');
+    setNewConstraintType('output');
+    setNewConstraintContent('');
+    setShowAddConstraint(false);
+  };
+
+  // ---------- 约束删除 ----------
+
+  const handleDeleteConstraint = async (cp: ConstraintPack) => {
+    if (window.confirm(`确认删除约束「${cp.name}」？`)) {
+      await editor.deleteConstraint(cp.id);
+    }
+  };
+
+  // ---------- 约束排序 ----------
+
+  const handleMoveConstraint = async (cpIndex: number, direction: 'up' | 'down') => {
+    const sorted = [...wu.constraints].sort((a, b) => a.order - b.order);
+    const ids = sorted.map((c) => c.id);
+    const swapIndex = direction === 'up' ? cpIndex - 1 : cpIndex + 1;
+    if (swapIndex < 0 || swapIndex >= ids.length) return;
+    [ids[cpIndex], ids[swapIndex]] = [ids[swapIndex], ids[cpIndex]];
+    await editor.reorderConstraints(ids);
   };
 
   // ---------- 渲染 ----------
@@ -379,6 +427,98 @@ export function WorkUnitDetailComponent() {
           </div>
         );
       })}
+
+      {/* 约束区域 */}
+      <div style={{ ...sectionHeaderStyle, marginTop: '2rem' }}>
+        <span style={{ fontWeight: 600, fontSize: '1.1rem' }}>
+          约束 ({wu.constraints.length})
+        </span>
+        <button type="button" style={btnPrimary} onClick={() => setShowAddConstraint(true)}>
+          + 添加约束
+        </button>
+      </div>
+
+      {/* 添加约束表单 */}
+      {showAddConstraint && (
+        <div style={formCardStyle}>
+          <input
+            type="text"
+            placeholder="约束名称"
+            style={inputStyle}
+            value={newConstraintName}
+            onChange={(e) => setNewConstraintName(e.target.value)}
+          />
+          <select
+            style={inputStyle}
+            value={newConstraintType}
+            onChange={(e) => setNewConstraintType(e.target.value as ConstraintType)}
+          >
+            {constraintTypeOptions.map((t) => (
+              <option key={t} value={t}>{constraintTypeLabels[t]}</option>
+            ))}
+          </select>
+          <textarea
+            placeholder="约束内容"
+            style={inputStyle}
+            value={newConstraintContent}
+            onChange={(e) => setNewConstraintContent(e.target.value)}
+            rows={2}
+          />
+          <div style={formActionsStyle}>
+            <button type="button" style={btnPrimary} onClick={handleAddConstraint}>确认添加约束</button>
+            <button type="button" style={btnSecondary} onClick={() => {
+              setShowAddConstraint(false);
+              setNewConstraintName('');
+              setNewConstraintType('output');
+              setNewConstraintContent('');
+            }}>取消</button>
+          </div>
+        </div>
+      )}
+
+      {/* 约束空提示 */}
+      {wu.constraints.length === 0 && !showAddConstraint && (
+        <p style={emptyHintStyle}>暂无约束，点击上方按钮添加。</p>
+      )}
+
+      {/* 约束列表 */}
+      {[...wu.constraints].sort((a, b) => a.order - b.order).map((cp, cpIdx) => (
+        <div key={cp.id} style={slotCardStyle}>
+          <div style={slotHeaderStyle}>
+            <span style={{ fontWeight: 600 }}>{cp.name}</span>
+            <span style={tagStyle}>{constraintTypeLabels[cp.constraintType]}</span>
+            <div style={{ ...capActionsStyle, marginLeft: 'auto' }}>
+              <button
+                type="button"
+                style={btnSmall}
+                aria-label={`上移约束 ${cp.name}`}
+                disabled={cpIdx === 0}
+                onClick={() => handleMoveConstraint(cpIdx, 'up')}
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                style={btnSmall}
+                aria-label={`下移约束 ${cp.name}`}
+                disabled={cpIdx === wu.constraints.length - 1}
+                onClick={() => handleMoveConstraint(cpIdx, 'down')}
+              >
+                ↓
+              </button>
+              <button
+                type="button"
+                style={btnDangerSmall}
+                aria-label={`删除约束 ${cp.name}`}
+                onClick={() => handleDeleteConstraint(cp)}
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+          <p style={slotDescStyle}>{cp.content}</p>
+        </div>
+      ))}
     </div>
   );
 }
