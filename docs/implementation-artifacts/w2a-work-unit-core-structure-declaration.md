@@ -1,6 +1,6 @@
 # Story W2a: Work Unit 核心结构声明
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -221,3 +221,22 @@ Claude Opus 4.6 (1M context)
 - 目标 story：`w2a-work-unit-core-structure-declaration`
 
 ### File List
+
+**新增文件：**
+- `src/types/slot.types.ts` — Slot 类型定义（SlotType + Slot interface）
+- `src/types/capability.types.ts` — Capability 类型定义
+- `src/hooks/useWorkUnitEditor.ts` — 单个 Work Unit 编辑 hook
+- `tests/slot.types.test.ts` — 类型契约测试（5 tests）
+- `tests/workUnitDetailComponent.test.tsx` — 编辑器组件测试（9 tests）
+
+**修改文件：**
+- `src/types/index.ts` — 新增 Slot/Capability/SlotType barrel export
+- `src/services/StorageService.ts` — schema v2 + description/slots 字段 + Slot CRUD + Capability CRUD + reorder + clone + updateWorkUnitInfo
+- `src/hooks/useWorkUnits.ts` — 增加 cloneWorkUnit 方法
+- `src/hooks/index.ts` — 增加 useWorkUnitEditor barrel export
+- `src/components/WorkUnitDetail/WorkUnitDetailComponent.tsx` — 从占位页重写为结构化编辑器
+- `src/components/WorkUnitList/WorkUnitListComponent.tsx` — 增加复制按钮
+- `tests/storageService.test.ts` — 增加 schema v2、Slot CRUD、Capability CRUD、clone 测试（+19 tests）
+- `tests/workUnitListComponent.test.tsx` — 增加复制测试（+1 test）
+
+**测试统计：** 107 tests（W1 的 73 + W2a 新增 34），全部通过。
