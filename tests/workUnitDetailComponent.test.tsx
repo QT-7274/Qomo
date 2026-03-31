@@ -320,6 +320,60 @@ describe('WorkUnitDetailComponent', () => {
     });
   });
 
+  describe('预览与交接面板', () => {
+    it('显示交接准备状态 — ready', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      await StorageService.addSlot(wu.id, { name: '目标', slotType: 'context', required: true });
+      const after = await StorageService.getWorkUnit(wu.id);
+      await StorageService.addCapability(wu.id, after!.slots[0].id, { name: 'C', content: '内容' });
+      renderDetail(wu.id);
+
+      await waitFor(() => {
+        expect(screen.getByText('✅ 可交接')).toBeTruthy();
+      });
+    });
+
+    it('显示交接准备状态 — incomplete', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      await StorageService.addSlot(wu.id, { name: '目标', slotType: 'context', required: true });
+      renderDetail(wu.id);
+
+      await waitFor(() => {
+        expect(screen.getByText('❌ 需完善')).toBeTruthy();
+      });
+    });
+
+    it('点击生成预览后显示 Prompt 文本', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      await StorageService.addSlot(wu.id, { name: '目标', slotType: 'context', required: true });
+      const after = await StorageService.getWorkUnit(wu.id);
+      await StorageService.addCapability(wu.id, after!.slots[0].id, { name: '描述', content: '完成认证模块' });
+      renderDetail(wu.id);
+
+      await waitFor(() => {
+        expect(screen.getByText('生成预览')).toBeTruthy();
+      });
+      fireEvent.click(screen.getByText('生成预览'));
+
+      await waitFor(() => {
+        const matches = screen.getAllByText(/完成认证模块/);
+        const preEl = matches.find((el) => el.tagName === 'PRE');
+        expect(preEl).toBeTruthy();
+      });
+    });
+
+    it('空 Work Unit 导出按钮禁用', async () => {
+      const wu = await StorageService.createWorkUnit('空WU');
+      renderDetail(wu.id);
+
+      await waitFor(() => {
+        expect(screen.getByText('❌ 需完善')).toBeTruthy();
+      });
+      const copyBtn = screen.getByText('复制');
+      expect(copyBtn.closest('button')!.hasAttribute('disabled')).toBe(true);
+    });
+  });
+
   describe('待补齐声明 UI', () => {
     it('Slot 无 fillIn 时不显示待补齐标签', async () => {
       const wu = await StorageService.createWorkUnit('测试');

@@ -10,6 +10,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useWorkUnitEditor } from '../../hooks/useWorkUnitEditor';
 import type { SlotType, Slot, Capability, ConstraintType, ConstraintPack, FillInMethod } from '../../types';
+import { generatePromptPreview, getHandoffReadiness } from '../../utils/promptGeneratorUtil';
+import type { HandoffStatus } from '../../utils/promptGeneratorUtil';
 
 // ---------------------------------------------------------------------------
 // 常量
@@ -40,6 +42,18 @@ const fillInMethodLabels: Record<FillInMethod, string> = {
 };
 
 const fillInMethodOptions: FillInMethod[] = ['auto', 'user-confirm', 'manual'];
+
+const handoffStatusLabels: Record<HandoffStatus, string> = {
+  ready: '✅ 可交接',
+  partial: '⚠️ 部分准备',
+  incomplete: '❌ 需完善',
+};
+
+const handoffStatusStyles: Record<HandoffStatus, React.CSSProperties> = {
+  ready: { padding: '0.25rem 0.75rem', background: '#c6f6d5', color: '#276749', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600 },
+  partial: { padding: '0.25rem 0.75rem', background: '#fefcbf', color: '#975a16', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600 },
+  incomplete: { padding: '0.25rem 0.75rem', background: '#fed7d7', color: '#c53030', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600 },
+};
 
 // ---------------------------------------------------------------------------
 // 组件
@@ -72,6 +86,10 @@ export function WorkUnitDetailComponent() {
   const [newConstraintType, setNewConstraintType] = useState<ConstraintType>('output');
   const [newConstraintContent, setNewConstraintContent] = useState('');
 
+  // 预览状态
+  const [previewText, setPreviewText] = useState<string | null>(null);
+  const [copyFeedback, setCopyFeedback] = useState(false);
+
   // ---------- 加载 / 错误 ----------
 
   if (editor.loading) {
@@ -91,7 +109,8 @@ export function WorkUnitDetailComponent() {
 
   const wu = editor.workUnit;
 
-  // ---------- 名称 blur ----------
+  const handoffStatus: HandoffStatus = getHandoffReadiness(wu);
+  const hasContent = wu.slots.some((s) => s.capabilities.length > 0) || wu.constraints.length > 0;
 
   const handleNameBlur = () => {
     if (localName !== null && localName !== wu.name) {
@@ -211,6 +230,37 @@ export function WorkUnitDetailComponent() {
     await editor.reorderConstraints(ids);
   };
 
+  // ---------- 预览 ----------
+
+  const handleGeneratePreview = () => {
+    const text = generatePromptPreview(wu);
+    setPreviewText(text);
+  };
+
+  const handleCopy = async () => {
+    if (!previewText) return;
+    try {
+      await navigator.clipboard.writeText(previewText);
+      setCopyFeedback(true);
+      setTimeout(() => setCopyFeedback(false), 2000);
+    } catch {
+      window.alert('复制失败，请手动选择文本复制。');
+    }
+  };
+
+  const handleDownload = () => {
+    if (!previewText) return;
+    const blob = new Blob([previewText], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${wu.name}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   // ---------- 渲染 ----------
 
   return (
@@ -221,7 +271,7 @@ export function WorkUnitDetailComponent() {
           ← 返回列表
         </button>
         <button type="button" style={btnSecondary} onClick={handleClone}>
-          复制
+          复制副本
         </button>
       </div>
 
@@ -565,6 +615,32 @@ export function WorkUnitDetailComponent() {
           </>
         );
       })()}
+
+      {/* 预览与交接 */}
+      <div style={{ ...sectionHeaderStyle, marginTop: '2rem' }}>
+        <span style={{ fontWeight: 600, fontSize: '1.1rem' }}>预览与交接</span>
+        <span style={handoffStatusStyles[handoffStatus]}>{handoffStatusLabels[handoffStatus]}</span>
+      </div>
+
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+        <button type="button" style={btnPrimary} onClick={handleGeneratePreview}>
+          生成预览
+        </button>
+        <button type="button" style={btnSecondary} onClick={handleCopy} disabled={!previewText || !hasContent}>
+          {copyFeedback ? '已复制 ✓' : '复制'}
+        </button>
+        <button type="button" style={btnSecondary} onClick={handleDownload} disabled={!previewText || !hasContent}>
+          下载 .txt
+        </button>
+      </div>
+
+      {!hasContent && (
+        <p style={emptyHintStyle}>内容为空，请先添加 Slot 和 Capability。</p>
+      )}
+
+      {previewText !== null && (
+        <pre style={previewBoxStyle}>{previewText || '（无内容）'}</pre>
+      )}
     </div>
   );
 }
@@ -842,4 +918,18 @@ const summaryItemStyle: React.CSSProperties = {
   fontSize: '0.85rem',
   color: '#4a5568',
   padding: '0.2rem 0',
+};
+
+const previewBoxStyle: React.CSSProperties = {
+  padding: '1rem',
+  background: '#1a202c',
+  color: '#e2e8f0',
+  borderRadius: '8px',
+  fontSize: '0.85rem',
+  lineHeight: 1.6,
+  whiteSpace: 'pre-wrap',
+  wordBreak: 'break-word',
+  overflow: 'auto',
+  maxHeight: '400px',
+  fontFamily: 'ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace',
 };
