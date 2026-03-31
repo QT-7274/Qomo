@@ -7,11 +7,12 @@
  */
 
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useWorkUnitEditor } from '../../hooks/useWorkUnitEditor';
 import type { SlotType, Slot, Capability, ConstraintType, ConstraintPack, FillInMethod } from '../../types';
 import { generatePromptPreview, getHandoffReadiness } from '../../utils/promptGeneratorUtil';
 import type { HandoffStatus } from '../../utils/promptGeneratorUtil';
+import type { WorkUnitVersionRecord } from '../../services/StorageService';
 
 // ---------------------------------------------------------------------------
 // 常量
@@ -89,6 +90,22 @@ export function WorkUnitDetailComponent() {
   // 预览状态
   const [previewText, setPreviewText] = useState<string | null>(null);
   const [copyFeedback, setCopyFeedback] = useState(false);
+
+  // 版本历史
+  const [snapshots, setSnapshots] = useState<WorkUnitVersionRecord[]>([]);
+  const [snapshotsLoaded, setSnapshotsLoaded] = useState(false);
+
+  const loadSnapshots = useCallback(async () => {
+    const list = await editor.listSnapshots();
+    setSnapshots(list);
+    setSnapshotsLoaded(true);
+  }, [editor.listSnapshots]);
+
+  useEffect(() => {
+    if (editor.workUnit) {
+      loadSnapshots();
+    }
+  }, [editor.workUnit, loadSnapshots]);
 
   // ---------- 加载 / 错误 ----------
 
@@ -259,6 +276,18 @@ export function WorkUnitDetailComponent() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const handleCreateSnapshot = async () => {
+    await editor.createSnapshot();
+    await loadSnapshots();
+  };
+
+  const handleRestoreSnapshot = async (snapshotId: string, versionNumber: number) => {
+    if (window.confirm(`确认恢复到版本 v${versionNumber}？当前未保存的修改将被覆盖。`)) {
+      await editor.restoreSnapshot(snapshotId);
+      await loadSnapshots();
+    }
   };
 
   // ---------- 渲染 ----------
@@ -641,6 +670,35 @@ export function WorkUnitDetailComponent() {
       {previewText !== null && (
         <pre style={previewBoxStyle}>{previewText || '（无内容）'}</pre>
       )}
+
+      {/* 版本历史 */}
+      <div style={{ ...sectionHeaderStyle, marginTop: '2rem' }}>
+        <span style={{ fontWeight: 600, fontSize: '1.1rem' }}>
+          版本历史 ({snapshots.length})
+        </span>
+        <button type="button" style={btnPrimary} onClick={handleCreateSnapshot}>
+          创建快照
+        </button>
+      </div>
+
+      {snapshotsLoaded && snapshots.length === 0 && (
+        <p style={emptyHintStyle}>暂无版本快照</p>
+      )}
+
+      {snapshots.map((snap) => (
+        <div key={snap.id} style={versionRowStyle}>
+          <span style={{ fontWeight: 600 }}>v{snap.versionNumber}</span>
+          <span style={metaTextStyle}>{snap.createdAt.slice(0, 19).replace('T', ' ')}</span>
+          <span style={tagStyle}>{snap.contentHash}</span>
+          <button
+            type="button"
+            style={btnSecondary}
+            onClick={() => handleRestoreSnapshot(snap.id, snap.versionNumber)}
+          >
+            恢复
+          </button>
+        </div>
+      ))}
     </div>
   );
 }
@@ -932,4 +990,15 @@ const previewBoxStyle: React.CSSProperties = {
   overflow: 'auto',
   maxHeight: '400px',
   fontFamily: 'ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace',
+};
+
+const versionRowStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.75rem',
+  padding: '0.6rem 0.75rem',
+  border: '1px solid #e2e8f0',
+  borderRadius: '6px',
+  marginBottom: '0.5rem',
+  fontSize: '0.85rem',
 };

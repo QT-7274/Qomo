@@ -26,6 +26,7 @@ describe('WorkUnitDetailComponent', () => {
   beforeEach(async () => {
     cleanup();
     await StorageService._db.workUnits.clear();
+    await StorageService._db.workUnitVersions.clear();
   });
 
   it('展示 Work Unit 基本信息', async () => {
@@ -425,6 +426,41 @@ describe('WorkUnitDetailComponent', () => {
         expect(screen.getByText('Slot1')).toBeTruthy();
       });
       expect(screen.queryByText(/待补齐项/)).toBeNull();
+    });
+  });
+
+  describe('版本历史', () => {
+    it('显示版本历史区域标题', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      renderDetail(wu.id);
+
+      await waitFor(() => {
+        expect(screen.getByText(/版本历史/)).toBeTruthy();
+      });
+    });
+
+    it('创建快照后版本列表更新', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      await StorageService.addSlot(wu.id, { name: 'S', slotType: 'context', required: false });
+      renderDetail(wu.id);
+
+      await waitFor(() => {
+        expect(screen.getByText('创建快照')).toBeTruthy();
+      });
+      fireEvent.click(screen.getByText('创建快照'));
+
+      await waitFor(() => {
+        expect(screen.getByText(/v1/)).toBeTruthy();
+      });
+    });
+
+    it('无快照时显示空提示', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      renderDetail(wu.id);
+
+      await waitFor(() => {
+        expect(screen.getByText('暂无版本快照')).toBeTruthy();
+      });
     });
   });
 });

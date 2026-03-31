@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { StorageService, type WorkUnitRecord } from '../services/StorageService';
+import type { WorkUnitVersionRecord } from '../services/StorageService';
 import type { SlotType } from '../types/slot.types';
 import type { ConstraintType, OutputFormatType, LengthLimit } from '../types/constraint.types';
 import type { FillInDeclaration } from '../types/fillIn.types';
@@ -87,6 +88,12 @@ export interface UseWorkUnitEditorReturn {
   setSlotFillIn: (slotId: string, fillIn: FillInDeclaration) => Promise<void>;
   /** 清除 Slot 的待补齐声明 */
   clearSlotFillIn: (slotId: string) => Promise<void>;
+  /** 创建快照 */
+  createSnapshot: () => Promise<void>;
+  /** 列出快照 */
+  listSnapshots: () => Promise<WorkUnitVersionRecord[]>;
+  /** 恢复快照 */
+  restoreSnapshot: (snapshotId: string) => Promise<void>;
 }
 
 export function useWorkUnitEditor(id: string | undefined): UseWorkUnitEditorReturn {
@@ -259,6 +266,22 @@ export function useWorkUnitEditor(id: string | undefined): UseWorkUnitEditorRetu
     await fetchWorkUnit();
   }, [id, fetchWorkUnit]);
 
+  const createSnapshot = useCallback(async () => {
+    if (!id) return;
+    await StorageService.createSnapshot(id);
+  }, [id]);
+
+  const listSnapshots = useCallback(async (): Promise<WorkUnitVersionRecord[]> => {
+    if (!id) return [];
+    return StorageService.listSnapshots(id);
+  }, [id]);
+
+  const restoreSnapshot = useCallback(async (snapshotId: string) => {
+    if (!id) return;
+    await StorageService.restoreSnapshot(id, snapshotId);
+    await fetchWorkUnit();
+  }, [id, fetchWorkUnit]);
+
   return {
     workUnit,
     loading,
@@ -283,5 +306,8 @@ export function useWorkUnitEditor(id: string | undefined): UseWorkUnitEditorRetu
     reorderChecklistItems,
     setSlotFillIn,
     clearSlotFillIn,
+    createSnapshot,
+    listSnapshots,
+    restoreSnapshot,
   };
 }
