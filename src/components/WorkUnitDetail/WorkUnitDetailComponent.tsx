@@ -1,60 +1,391 @@
 /**
- * WorkUnitDetailComponent — Work Unit 详情/编辑占位页面
+ * WorkUnitDetailComponent — Work Unit 结构化编辑器
  *
- * W1 Story: 导航链路占位。W2a 将承接结构声明功能。
+ * W2a Story: 支持名称/描述编辑、Slot CRUD、Capability CRUD 与排序。
+ *
+ * 所有数据操作通过 useWorkUnitEditor hook 完成，不直接调用 StorageService。
  */
 
 import { useParams, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import { StorageService, type WorkUnitRecord } from '../../services/StorageService';
+import { useState } from 'react';
+import { useWorkUnitEditor } from '../../hooks/useWorkUnitEditor';
+import type { SlotType, Slot, Capability } from '../../types';
+
+// ---------------------------------------------------------------------------
+// 常量
+// ---------------------------------------------------------------------------
+
+const slotTypeLabels: Record<SlotType, string> = {
+  context: '上下文',
+  rule: '规则',
+  output: '输出',
+  capability: '能力',
+  custom: '自定义',
+};
+
+const slotTypeOptions: SlotType[] = ['context', 'rule', 'output', 'capability', 'custom'];
+
+// ---------------------------------------------------------------------------
+// 组件
+// ---------------------------------------------------------------------------
 
 export function WorkUnitDetailComponent() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [workUnit, setWorkUnit] = useState<WorkUnitRecord | null>(null);
-  const [loading, setLoading] = useState(true);
+  const editor = useWorkUnitEditor(id);
 
-  useEffect(() => {
-    if (!id) return;
-    StorageService.getWorkUnit(id).then((record) => {
-      setWorkUnit(record ?? null);
-      setLoading(false);
-    });
-  }, [id]);
+  // 名称 / 描述本地编辑态
+  const [localName, setLocalName] = useState<string | null>(null);
+  const [localDesc, setLocalDesc] = useState<string | null>(null);
 
-  if (loading) {
+  // 添加 Slot 表单
+  const [showAddSlot, setShowAddSlot] = useState(false);
+  const [newSlotName, setNewSlotName] = useState('');
+  const [newSlotType, setNewSlotType] = useState<SlotType>('context');
+  const [newSlotDesc, setNewSlotDesc] = useState('');
+  const [newSlotRequired, setNewSlotRequired] = useState(false);
+
+  // 添加 Capability 表单（按 slotId 切换）
+  const [addCapSlotId, setAddCapSlotId] = useState<string | null>(null);
+  const [newCapName, setNewCapName] = useState('');
+  const [newCapContent, setNewCapContent] = useState('');
+
+  // ---------- 加载 / 错误 ----------
+
+  if (editor.loading) {
     return <div style={pageStyle}><p>加载中…</p></div>;
   }
 
-  if (!workUnit) {
+  if (!editor.workUnit) {
     return (
       <div style={pageStyle}>
         <p>Work Unit 不存在。</p>
-        <button type="button" style={backBtnStyle} onClick={() => navigate('/')}>
+        <button type="button" style={btnSecondary} onClick={() => navigate('/')}>
           ← 返回列表
         </button>
       </div>
     );
   }
 
+  const wu = editor.workUnit;
+
+  // ---------- 名称 blur ----------
+
+  const handleNameBlur = () => {
+    if (localName !== null && localName !== wu.name) {
+      editor.updateInfo({ name: localName });
+    }
+    setLocalName(null);
+  };
+
+  // ---------- 描述 blur ----------
+
+  const handleDescBlur = () => {
+    if (localDesc !== null && localDesc !== wu.description) {
+      editor.updateInfo({ description: localDesc });
+    }
+    setLocalDesc(null);
+  };
+
+  // ---------- Slot 添加 ----------
+
+  const handleAddSlot = async () => {
+    if (!newSlotName.trim()) return;
+    await editor.addSlot({
+      name: newSlotName.trim(),
+      slotType: newSlotType,
+      description: newSlotDesc.trim() || undefined,
+      required: newSlotRequired,
+    });
+    setNewSlotName('');
+    setNewSlotType('context');
+    setNewSlotDesc('');
+    setNewSlotRequired(false);
+    setShowAddSlot(false);
+  };
+
+  // ---------- Slot 删除 ----------
+
+  const handleDeleteSlot = async (slot: Slot) => {
+    if (slot.capabilities.length > 0) {
+      window.alert('Slot 下仍有 Capability，请先删除所有 Capability。');
+      return;
+    }
+    if (window.confirm(`确认删除 Slot「${slot.name}」？`)) {
+      await editor.deleteSlot(slot.id);
+    }
+  };
+
+  // ---------- Capability 添加 ----------
+
+  const handleAddCapability = async (slotId: string) => {
+    if (!newCapName.trim()) return;
+    await editor.addCapability(slotId, {
+      name: newCapName.trim(),
+      content: newCapContent,
+    });
+    setNewCapName('');
+    setNewCapContent('');
+    setAddCapSlotId(null);
+  };
+
+  // ---------- Capability 删除 ----------
+
+  const handleDeleteCapability = async (slotId: string, cap: Capability) => {
+    if (window.confirm(`确认删除 Capability「${cap.name}」？`)) {
+      await editor.deleteCapability(slotId, cap.id);
+    }
+  };
+
+  // ---------- Capability 上移 / 下移 ----------
+
+  const handleMoveCapability = async (slot: Slot, capIndex: number, direction: 'up' | 'down') => {
+    const sorted = [...slot.capabilities].sort((a, b) => a.order - b.order);
+    const ids = sorted.map((c) => c.id);
+    const swapIndex = direction === 'up' ? capIndex - 1 : capIndex + 1;
+    if (swapIndex < 0 || swapIndex >= ids.length) return;
+    [ids[capIndex], ids[swapIndex]] = [ids[swapIndex], ids[capIndex]];
+    await editor.reorderCapabilities(slot.id, ids);
+  };
+
+  // ---------- 复制 ----------
+
+  const handleClone = async () => {
+    const newId = await editor.cloneWorkUnit();
+    navigate(`/work-unit/${newId}`);
+  };
+
+  // ---------- 渲染 ----------
+
   return (
     <div style={pageStyle}>
-      <button type="button" style={backBtnStyle} onClick={() => navigate('/')}>
-        ← 返回列表
-      </button>
-      <h1 style={titleStyle}>{workUnit.name}</h1>
-      <dl style={dlStyle}>
-        <dt>ID</dt><dd style={ddStyle}>{workUnit.id}</dd>
-        <dt>来源</dt><dd style={ddStyle}>{workUnit.sourceType}</dd>
-        <dt>创建时间</dt><dd style={ddStyle}>{workUnit.createdAt}</dd>
-        <dt>修改时间</dt><dd style={ddStyle}>{workUnit.updatedAt}</dd>
-      </dl>
-      <p style={placeholderStyle}>
-        结构声明与编辑功能将在 W2a 中实现。
-      </p>
+      {/* 顶部栏 */}
+      <div style={topBarStyle}>
+        <button type="button" style={btnSecondary} onClick={() => navigate('/')}>
+          ← 返回列表
+        </button>
+        <button type="button" style={btnSecondary} onClick={handleClone}>
+          复制
+        </button>
+      </div>
+
+      {/* 名称 */}
+      <input
+        type="text"
+        style={nameInputStyle}
+        value={localName ?? wu.name}
+        onChange={(e) => setLocalName(e.target.value)}
+        onFocus={() => setLocalName(wu.name)}
+        onBlur={handleNameBlur}
+      />
+
+      {/* 描述 */}
+      <textarea
+        style={descInputStyle}
+        placeholder="添加描述…"
+        value={localDesc ?? wu.description}
+        onChange={(e) => setLocalDesc(e.target.value)}
+        onFocus={() => setLocalDesc(wu.description)}
+        onBlur={handleDescBlur}
+        rows={2}
+      />
+
+      {/* 元信息 */}
+      <div style={metaBarStyle}>
+        <span style={tagStyle}>{wu.sourceType}</span>
+        <span style={metaTextStyle}>创建于 {wu.createdAt.slice(0, 10)}</span>
+      </div>
+
+      {/* Slots 区域 */}
+      <div style={sectionHeaderStyle}>
+        <span style={{ fontWeight: 600, fontSize: '1.1rem' }}>
+          Slots ({wu.slots.length})
+        </span>
+        <button type="button" style={btnPrimary} onClick={() => setShowAddSlot(true)}>
+          + 添加 Slot
+        </button>
+      </div>
+
+      {/* 添加 Slot 表单 */}
+      {showAddSlot && (
+        <div style={formCardStyle}>
+          <input
+            type="text"
+            placeholder="Slot 名称"
+            style={inputStyle}
+            value={newSlotName}
+            onChange={(e) => setNewSlotName(e.target.value)}
+          />
+          <select
+            style={inputStyle}
+            value={newSlotType}
+            onChange={(e) => setNewSlotType(e.target.value as SlotType)}
+          >
+            {slotTypeOptions.map((t) => (
+              <option key={t} value={t}>{slotTypeLabels[t]}</option>
+            ))}
+          </select>
+          <input
+            type="text"
+            placeholder="描述（可选）"
+            style={inputStyle}
+            value={newSlotDesc}
+            onChange={(e) => setNewSlotDesc(e.target.value)}
+          />
+          <label style={checkboxLabelStyle}>
+            <input
+              type="checkbox"
+              checked={newSlotRequired}
+              onChange={(e) => setNewSlotRequired(e.target.checked)}
+            />
+            必需
+          </label>
+          <div style={formActionsStyle}>
+            <button type="button" style={btnPrimary} onClick={handleAddSlot}>确认添加</button>
+            <button
+              type="button"
+              style={btnSecondary}
+              onClick={() => {
+                setShowAddSlot(false);
+                setNewSlotName('');
+                setNewSlotType('context');
+                setNewSlotDesc('');
+                setNewSlotRequired(false);
+              }}
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 空提示 */}
+      {wu.slots.length === 0 && (
+        <p style={emptyHintStyle}>暂无 Slot，点击上方按钮添加。</p>
+      )}
+
+      {/* Slot 列表 */}
+      {wu.slots.map((slot) => {
+        const sortedCaps = [...slot.capabilities].sort((a, b) => a.order - b.order);
+        return (
+          <div key={slot.id} style={slotCardStyle}>
+            {/* Slot 头部 */}
+            <div style={slotHeaderStyle}>
+              <span style={{ fontWeight: 600 }}>{slot.name}</span>
+              <span style={tagStyle}>{slotTypeLabels[slot.slotType]}</span>
+              {slot.required && <span style={requiredTagStyle}>必需</span>}
+              <button
+                type="button"
+                style={btnDanger}
+                aria-label={`删除 Slot ${slot.name}`}
+                onClick={() => handleDeleteSlot(slot)}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Slot 描述 */}
+            {slot.description && (
+              <p style={slotDescStyle}>{slot.description}</p>
+            )}
+
+            {/* Capability 列表 */}
+            {sortedCaps.map((cap, idx) => (
+              <div key={cap.id} style={capRowStyle}>
+                <span style={{ fontWeight: 500 }}>{cap.name}</span>
+                <span style={capContentStyle}>{cap.content.slice(0, 60)}</span>
+                <div style={capActionsStyle}>
+                  <button
+                    type="button"
+                    style={btnSmall}
+                    aria-label={`上移 ${cap.name}`}
+                    disabled={idx === 0}
+                    onClick={() => handleMoveCapability(slot, idx, 'up')}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    style={btnSmall}
+                    aria-label={`下移 ${cap.name}`}
+                    disabled={idx === sortedCaps.length - 1}
+                    onClick={() => handleMoveCapability(slot, idx, 'down')}
+                  >
+                    ↓
+                  </button>
+                  <button
+                    type="button"
+                    style={btnDangerSmall}
+                    aria-label={`删除 Capability ${cap.name}`}
+                    onClick={() => handleDeleteCapability(slot.id, cap)}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {/* 添加 Capability */}
+            {addCapSlotId === slot.id ? (
+              <div style={formCardInnerStyle}>
+                <input
+                  type="text"
+                  placeholder="Capability 名称"
+                  style={inputStyle}
+                  value={newCapName}
+                  onChange={(e) => setNewCapName(e.target.value)}
+                />
+                <textarea
+                  placeholder="内容"
+                  style={inputStyle}
+                  value={newCapContent}
+                  onChange={(e) => setNewCapContent(e.target.value)}
+                  rows={2}
+                />
+                <div style={formActionsStyle}>
+                  <button
+                    type="button"
+                    style={btnPrimary}
+                    onClick={() => handleAddCapability(slot.id)}
+                  >
+                    确认添加 Capability
+                  </button>
+                  <button
+                    type="button"
+                    style={btnSecondary}
+                    onClick={() => {
+                      setAddCapSlotId(null);
+                      setNewCapName('');
+                      setNewCapContent('');
+                    }}
+                  >
+                    取消
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                style={btnAddCap}
+                onClick={() => {
+                  setAddCapSlotId(slot.id);
+                  setNewCapName('');
+                  setNewCapContent('');
+                }}
+              >
+                + 添加 Capability
+              </button>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// 样式
+// ---------------------------------------------------------------------------
 
 const pageStyle: React.CSSProperties = {
   maxWidth: 720,
@@ -63,7 +394,14 @@ const pageStyle: React.CSSProperties = {
   fontFamily: 'system-ui, sans-serif',
 };
 
-const backBtnStyle: React.CSSProperties = {
+const topBarStyle: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: '1rem',
+};
+
+const btnSecondary: React.CSSProperties = {
   padding: '0.4rem 0.8rem',
   background: '#edf2f7',
   border: 'none',
@@ -71,34 +409,214 @@ const backBtnStyle: React.CSSProperties = {
   cursor: 'pointer',
   fontSize: '0.85rem',
   color: '#4a5568',
-  marginBottom: '1rem',
 };
 
-const titleStyle: React.CSSProperties = {
+const btnPrimary: React.CSSProperties = {
+  padding: '0.4rem 0.8rem',
+  background: '#4299e1',
+  color: '#fff',
+  border: 'none',
+  borderRadius: '6px',
+  cursor: 'pointer',
+  fontSize: '0.85rem',
+};
+
+const btnDanger: React.CSSProperties = {
+  padding: '0.2rem 0.5rem',
+  background: '#fed7d7',
+  color: '#c53030',
+  border: 'none',
+  borderRadius: '4px',
+  cursor: 'pointer',
+  fontSize: '0.8rem',
+  marginLeft: 'auto',
+};
+
+const btnDangerSmall: React.CSSProperties = {
+  padding: '0.1rem 0.4rem',
+  background: '#fed7d7',
+  color: '#c53030',
+  border: 'none',
+  borderRadius: '4px',
+  cursor: 'pointer',
+  fontSize: '0.75rem',
+};
+
+const btnSmall: React.CSSProperties = {
+  padding: '0.1rem 0.4rem',
+  background: '#edf2f7',
+  border: 'none',
+  borderRadius: '4px',
+  cursor: 'pointer',
+  fontSize: '0.75rem',
+  color: '#4a5568',
+};
+
+const btnAddCap: React.CSSProperties = {
+  padding: '0.3rem 0.6rem',
+  background: 'transparent',
+  border: '1px dashed #cbd5e0',
+  borderRadius: '4px',
+  cursor: 'pointer',
+  fontSize: '0.8rem',
+  color: '#718096',
+  marginTop: '0.5rem',
+  width: '100%',
+};
+
+const nameInputStyle: React.CSSProperties = {
   fontSize: '1.5rem',
   fontWeight: 700,
   color: '#1a202c',
-  marginBottom: '1rem',
+  border: 'none',
+  borderBottom: '2px solid transparent',
+  outline: 'none',
+  width: '100%',
+  padding: '0.3rem 0',
+  marginBottom: '0.5rem',
+  background: 'transparent',
 };
 
-const dlStyle: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'auto 1fr',
-  gap: '0.5rem 1rem',
-  fontSize: '0.9rem',
+const descInputStyle: React.CSSProperties = {
+  fontSize: '0.95rem',
+  color: '#4a5568',
+  border: 'none',
+  outline: 'none',
+  width: '100%',
+  padding: '0.3rem 0',
+  marginBottom: '0.5rem',
+  background: 'transparent',
+  resize: 'vertical',
+  fontFamily: 'inherit',
 };
 
-const ddStyle: React.CSSProperties = {
-  margin: 0,
-  color: '#718096',
-  wordBreak: 'break-all',
+const metaBarStyle: React.CSSProperties = {
+  display: 'flex',
+  gap: '0.75rem',
+  alignItems: 'center',
+  marginBottom: '1.5rem',
+  fontSize: '0.8rem',
 };
 
-const placeholderStyle: React.CSSProperties = {
-  marginTop: '2rem',
+const metaTextStyle: React.CSSProperties = {
+  color: '#a0aec0',
+};
+
+const tagStyle: React.CSSProperties = {
+  padding: '0.15rem 0.5rem',
+  background: '#edf2f7',
+  borderRadius: '4px',
+  fontSize: '0.75rem',
+  color: '#4a5568',
+};
+
+const requiredTagStyle: React.CSSProperties = {
+  padding: '0.15rem 0.5rem',
+  background: '#fefcbf',
+  borderRadius: '4px',
+  fontSize: '0.75rem',
+  color: '#975a16',
+};
+
+const sectionHeaderStyle: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: '0.75rem',
+};
+
+const formCardStyle: React.CSSProperties = {
   padding: '1rem',
   background: '#f7fafc',
   borderRadius: '8px',
-  color: '#718096',
+  marginBottom: '1rem',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.5rem',
+};
+
+const formCardInnerStyle: React.CSSProperties = {
+  padding: '0.75rem',
+  background: '#f7fafc',
+  borderRadius: '6px',
+  marginTop: '0.5rem',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.5rem',
+};
+
+const formActionsStyle: React.CSSProperties = {
+  display: 'flex',
+  gap: '0.5rem',
+  marginTop: '0.25rem',
+};
+
+const inputStyle: React.CSSProperties = {
+  padding: '0.4rem 0.6rem',
+  border: '1px solid #e2e8f0',
+  borderRadius: '4px',
+  fontSize: '0.85rem',
+  fontFamily: 'inherit',
+};
+
+const checkboxLabelStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.4rem',
+  fontSize: '0.85rem',
+  color: '#4a5568',
+};
+
+const emptyHintStyle: React.CSSProperties = {
+  padding: '1rem',
+  background: '#f7fafc',
+  borderRadius: '8px',
+  color: '#a0aec0',
   textAlign: 'center',
+  fontSize: '0.9rem',
+};
+
+const slotCardStyle: React.CSSProperties = {
+  padding: '1rem',
+  border: '1px solid #e2e8f0',
+  borderRadius: '8px',
+  marginBottom: '0.75rem',
+};
+
+const slotHeaderStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.5rem',
+  marginBottom: '0.5rem',
+};
+
+const slotDescStyle: React.CSSProperties = {
+  fontSize: '0.85rem',
+  color: '#718096',
+  margin: '0 0 0.5rem',
+};
+
+const capRowStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.5rem',
+  padding: '0.4rem 0.5rem',
+  background: '#f7fafc',
+  borderRadius: '4px',
+  marginBottom: '0.3rem',
+  fontSize: '0.85rem',
+};
+
+const capContentStyle: React.CSSProperties = {
+  flex: 1,
+  color: '#718096',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+};
+
+const capActionsStyle: React.CSSProperties = {
+  display: 'flex',
+  gap: '0.25rem',
+  flexShrink: 0,
 };
