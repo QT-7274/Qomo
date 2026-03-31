@@ -99,7 +99,7 @@ export function WorkUnitDetailComponent() {
     const list = await editor.listSnapshots();
     setSnapshots(list);
     setSnapshotsLoaded(true);
-  }, [editor.listSnapshots]);
+  }, [editor]);
 
   useEffect(() => {
     if (editor.workUnit) {
