@@ -51,7 +51,7 @@ development_status:
   epic-1: in-progress
   w1-continue-governance-entry: done
   w2a-work-unit-core-structure-declaration: done
-  w2b-constraint-and-output-semantics-declaration: backlog
+  w2b-constraint-and-output-semantics-declaration: ready-for-dev
   w2c-runtime-fill-ins-semantics-declaration: backlog
   w3-handoff-readiness-preview: backlog
   w4-versioned-snapshot-and-editing-continuity: backlog
