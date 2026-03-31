@@ -9,6 +9,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { StorageService, type WorkUnitRecord } from '../services/StorageService';
 import type { SlotType } from '../types/slot.types';
+import type { ConstraintType, OutputFormatType, LengthLimit } from '../types/constraint.types';
 
 export interface UseWorkUnitEditorReturn {
   /** 当前 Work Unit 数据 */
@@ -53,6 +54,34 @@ export interface UseWorkUnitEditorReturn {
   reorderCapabilities: (slotId: string, orderedIds: string[]) => Promise<void>;
   /** 复制 Work Unit，返回新 ID */
   cloneWorkUnit: () => Promise<string>;
+  /** 添加约束 */
+  addConstraint: (params: {
+    name: string;
+    constraintType: ConstraintType;
+    content: string;
+    outputFormat?: OutputFormatType;
+    lengthLimit?: LengthLimit;
+    checklistItems?: Array<{ text: string; required: boolean }>;
+  }) => Promise<void>;
+  /** 更新约束 */
+  updateConstraint: (constraintId: string, params: {
+    name?: string;
+    content?: string;
+    outputFormat?: OutputFormatType;
+    lengthLimit?: LengthLimit;
+  }) => Promise<void>;
+  /** 删除约束 */
+  deleteConstraint: (constraintId: string) => Promise<void>;
+  /** 重排约束 */
+  reorderConstraints: (orderedIds: string[]) => Promise<void>;
+  /** 添加检查项 */
+  addChecklistItem: (constraintId: string, params: { text: string; required: boolean }) => Promise<void>;
+  /** 更新检查项 */
+  updateChecklistItem: (constraintId: string, itemId: string, params: { text?: string; required?: boolean }) => Promise<void>;
+  /** 删除检查项 */
+  deleteChecklistItem: (constraintId: string, itemId: string) => Promise<void>;
+  /** 重排检查项 */
+  reorderChecklistItems: (constraintId: string, orderedIds: string[]) => Promise<void>;
 }
 
 export function useWorkUnitEditor(id: string | undefined): UseWorkUnitEditorReturn {
@@ -153,6 +182,66 @@ export function useWorkUnitEditor(id: string | undefined): UseWorkUnitEditorRetu
     return cloned.id;
   }, [id]);
 
+  const addConstraint = useCallback(async (params: {
+    name: string;
+    constraintType: ConstraintType;
+    content: string;
+    outputFormat?: OutputFormatType;
+    lengthLimit?: LengthLimit;
+    checklistItems?: Array<{ text: string; required: boolean }>;
+  }) => {
+    if (!id) return;
+    await StorageService.addConstraint(id, params);
+    await fetchWorkUnit();
+  }, [id, fetchWorkUnit]);
+
+  const updateConstraint = useCallback(async (constraintId: string, params: {
+    name?: string;
+    content?: string;
+    outputFormat?: OutputFormatType;
+    lengthLimit?: LengthLimit;
+  }) => {
+    if (!id) return;
+    await StorageService.updateConstraint(id, constraintId, params);
+    await fetchWorkUnit();
+  }, [id, fetchWorkUnit]);
+
+  const deleteConstraint = useCallback(async (constraintId: string) => {
+    if (!id) return;
+    await StorageService.deleteConstraint(id, constraintId);
+    await fetchWorkUnit();
+  }, [id, fetchWorkUnit]);
+
+  const reorderConstraints = useCallback(async (orderedIds: string[]) => {
+    if (!id) return;
+    await StorageService.reorderConstraints(id, orderedIds);
+    await fetchWorkUnit();
+  }, [id, fetchWorkUnit]);
+
+  const addChecklistItem = useCallback(async (constraintId: string, params: { text: string; required: boolean }) => {
+    if (!id) return;
+    await StorageService.addChecklistItem(id, constraintId, params);
+    await fetchWorkUnit();
+  }, [id, fetchWorkUnit]);
+
+  const updateChecklistItem = useCallback(async (constraintId: string, itemId: string, params: { text?: string; required?: boolean }) => {
+    if (!id) return;
+    await StorageService.updateChecklistItem(id, constraintId, itemId, params);
+    await fetchWorkUnit();
+  }, [id, fetchWorkUnit]);
+
+  const deleteChecklistItem = useCallback(async (constraintId: string, itemId: string) => {
+    if (!id) return;
+    await StorageService.deleteChecklistItem(id, constraintId, itemId);
+    await fetchWorkUnit();
+  }, [id, fetchWorkUnit]);
+
+  const reorderChecklistItems = useCallback(async (constraintId: string, orderedIds: string[]) => {
+    if (!id) return;
+    await StorageService.reorderChecklistItems(id, constraintId, orderedIds);
+    await fetchWorkUnit();
+  }, [id, fetchWorkUnit]);
+
   return {
     workUnit,
     loading,
@@ -167,5 +256,13 @@ export function useWorkUnitEditor(id: string | undefined): UseWorkUnitEditorRetu
     deleteCapability,
     reorderCapabilities,
     cloneWorkUnit,
+    addConstraint,
+    updateConstraint,
+    deleteConstraint,
+    reorderConstraints,
+    addChecklistItem,
+    updateChecklistItem,
+    deleteChecklistItem,
+    reorderChecklistItems,
   };
 }
