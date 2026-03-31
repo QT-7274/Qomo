@@ -259,4 +259,96 @@ describe('StorageService', () => {
       expect(updated!.updatedAt).not.toBe(wu.updatedAt);
     });
   });
+
+  describe('Capability CRUD', () => {
+    async function createWorkUnitWithSlot() {
+      const wu = await StorageService.createWorkUnit('能力测试');
+      await StorageService.addSlot(wu.id, {
+        name: '能力挂载',
+        slotType: 'capability',
+        required: true,
+      });
+      const updated = await StorageService.getWorkUnit(wu.id);
+      return { workUnitId: wu.id, slotId: updated!.slots[0].id };
+    }
+
+    it('addCapability 添加到指定 Slot', async () => {
+      const { workUnitId, slotId } = await createWorkUnitWithSlot();
+      await StorageService.addCapability(workUnitId, slotId, {
+        name: '代码审查',
+        content: '审查代码质量',
+      });
+
+      const wu = await StorageService.getWorkUnit(workUnitId);
+      const caps = wu!.slots[0].capabilities;
+      expect(caps).toHaveLength(1);
+      expect(caps[0].name).toBe('代码审查');
+      expect(caps[0].content).toBe('审查代码质量');
+      expect(caps[0].order).toBe(0);
+      expect(caps[0].id).toBeTruthy();
+    });
+
+    it('addCapability 自动递增 order', async () => {
+      const { workUnitId, slotId } = await createWorkUnitWithSlot();
+      await StorageService.addCapability(workUnitId, slotId, { name: 'A', content: '内容A' });
+      await StorageService.addCapability(workUnitId, slotId, { name: 'B', content: '内容B' });
+
+      const wu = await StorageService.getWorkUnit(workUnitId);
+      const caps = wu!.slots[0].capabilities;
+      expect(caps[0].order).toBe(0);
+      expect(caps[1].order).toBe(1);
+    });
+
+    it('updateCapability 修改内容', async () => {
+      const { workUnitId, slotId } = await createWorkUnitWithSlot();
+      await StorageService.addCapability(workUnitId, slotId, { name: '原始', content: '原始内容' });
+
+      const wu = await StorageService.getWorkUnit(workUnitId);
+      const capId = wu!.slots[0].capabilities[0].id;
+      await StorageService.updateCapability(workUnitId, slotId, capId, {
+        name: '已修改',
+        content: '新内容',
+      });
+
+      const updated = await StorageService.getWorkUnit(workUnitId);
+      expect(updated!.slots[0].capabilities[0].name).toBe('已修改');
+      expect(updated!.slots[0].capabilities[0].content).toBe('新内容');
+    });
+
+    it('deleteCapability 删除指定能力', async () => {
+      const { workUnitId, slotId } = await createWorkUnitWithSlot();
+      await StorageService.addCapability(workUnitId, slotId, { name: 'A', content: '内容A' });
+      await StorageService.addCapability(workUnitId, slotId, { name: 'B', content: '内容B' });
+
+      const wu = await StorageService.getWorkUnit(workUnitId);
+      const capId = wu!.slots[0].capabilities[0].id;
+      await StorageService.deleteCapability(workUnitId, slotId, capId);
+
+      const updated = await StorageService.getWorkUnit(workUnitId);
+      expect(updated!.slots[0].capabilities).toHaveLength(1);
+      expect(updated!.slots[0].capabilities[0].name).toBe('B');
+    });
+
+    it('reorderCapabilities 重新排序', async () => {
+      const { workUnitId, slotId } = await createWorkUnitWithSlot();
+      await StorageService.addCapability(workUnitId, slotId, { name: 'A', content: '内容A' });
+      await StorageService.addCapability(workUnitId, slotId, { name: 'B', content: '内容B' });
+      await StorageService.addCapability(workUnitId, slotId, { name: 'C', content: '内容C' });
+
+      const wu = await StorageService.getWorkUnit(workUnitId);
+      const caps = wu!.slots[0].capabilities;
+      // 新顺序：C, A, B
+      const newOrder = [caps[2].id, caps[0].id, caps[1].id];
+      await StorageService.reorderCapabilities(workUnitId, slotId, newOrder);
+
+      const updated = await StorageService.getWorkUnit(workUnitId);
+      const reordered = updated!.slots[0].capabilities;
+      expect(reordered[0].name).toBe('C');
+      expect(reordered[0].order).toBe(0);
+      expect(reordered[1].name).toBe('A');
+      expect(reordered[1].order).toBe(1);
+      expect(reordered[2].name).toBe('B');
+      expect(reordered[2].order).toBe(2);
+    });
+  });
 });

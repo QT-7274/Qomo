@@ -12,6 +12,7 @@
 import Dexie, { type EntityTable } from 'dexie';
 import type { SourceType, ISO8601 } from '../types/workUnit.types';
 import type { Slot } from '../types/slot.types';
+import type { Capability } from '../types/capability.types';
 
 // ---------------------------------------------------------------------------
 // Work Unit 持久化记录（IndexedDB 表结构）
@@ -257,6 +258,131 @@ async function deleteSlot(workUnitId: string, slotId: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Capability CRUD
+// ---------------------------------------------------------------------------
+
+/** addCapability 的参数 */
+interface AddCapabilityParams {
+  name: string;
+  content: string;
+}
+
+/** 为 Slot 添加 Capability */
+async function addCapability(
+  workUnitId: string,
+  slotId: string,
+  params: AddCapabilityParams,
+): Promise<void> {
+  await db.transaction('rw', db.workUnits, async () => {
+    const wu = await db.workUnits.get(workUnitId);
+    if (!wu) throw new Error(`Work Unit ${workUnitId} 不存在`);
+
+    const slot = wu.slots.find((s) => s.id === slotId);
+    if (!slot) throw new Error(`Slot ${slotId} 不存在`);
+
+    const maxOrder = slot.capabilities.length > 0
+      ? Math.max(...slot.capabilities.map((c) => c.order))
+      : -1;
+
+    const newCap: Capability = {
+      id: generateId(),
+      name: params.name,
+      content: params.content,
+      order: maxOrder + 1,
+    };
+
+    slot.capabilities.push(newCap);
+    await db.workUnits.update(workUnitId, {
+      slots: wu.slots,
+      updatedAt: nowISO(),
+    });
+  });
+}
+
+/** updateCapability 的参数 */
+interface UpdateCapabilityParams {
+  name?: string;
+  content?: string;
+}
+
+/** 更新 Capability 属性 */
+async function updateCapability(
+  workUnitId: string,
+  slotId: string,
+  capabilityId: string,
+  params: UpdateCapabilityParams,
+): Promise<void> {
+  await db.transaction('rw', db.workUnits, async () => {
+    const wu = await db.workUnits.get(workUnitId);
+    if (!wu) throw new Error(`Work Unit ${workUnitId} 不存在`);
+
+    const slot = wu.slots.find((s) => s.id === slotId);
+    if (!slot) throw new Error(`Slot ${slotId} 不存在`);
+
+    const cap = slot.capabilities.find((c) => c.id === capabilityId);
+    if (!cap) throw new Error(`Capability ${capabilityId} 不存在`);
+
+    if (params.name !== undefined) cap.name = params.name;
+    if (params.content !== undefined) cap.content = params.content;
+
+    await db.workUnits.update(workUnitId, {
+      slots: wu.slots,
+      updatedAt: nowISO(),
+    });
+  });
+}
+
+/** 删除 Capability */
+async function deleteCapability(
+  workUnitId: string,
+  slotId: string,
+  capabilityId: string,
+): Promise<void> {
+  await db.transaction('rw', db.workUnits, async () => {
+    const wu = await db.workUnits.get(workUnitId);
+    if (!wu) throw new Error(`Work Unit ${workUnitId} 不存在`);
+
+    const slot = wu.slots.find((s) => s.id === slotId);
+    if (!slot) throw new Error(`Slot ${slotId} 不存在`);
+
+    slot.capabilities = slot.capabilities.filter((c) => c.id !== capabilityId);
+
+    await db.workUnits.update(workUnitId, {
+      slots: wu.slots,
+      updatedAt: nowISO(),
+    });
+  });
+}
+
+/** 按新的 ID 顺序重排 Capability */
+async function reorderCapabilities(
+  workUnitId: string,
+  slotId: string,
+  orderedIds: string[],
+): Promise<void> {
+  await db.transaction('rw', db.workUnits, async () => {
+    const wu = await db.workUnits.get(workUnitId);
+    if (!wu) throw new Error(`Work Unit ${workUnitId} 不存在`);
+
+    const slot = wu.slots.find((s) => s.id === slotId);
+    if (!slot) throw new Error(`Slot ${slotId} 不存在`);
+
+    const capMap = new Map(slot.capabilities.map((c) => [c.id, c]));
+    slot.capabilities = orderedIds.map((id, index) => {
+      const cap = capMap.get(id);
+      if (!cap) throw new Error(`Capability ${id} 不存在`);
+      cap.order = index;
+      return cap;
+    });
+
+    await db.workUnits.update(workUnitId, {
+      slots: wu.slots,
+      updatedAt: nowISO(),
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
 // 导出
 // ---------------------------------------------------------------------------
 
@@ -270,6 +396,10 @@ export const StorageService = {
   addSlot,
   updateSlot,
   deleteSlot,
+  addCapability,
+  updateCapability,
+  deleteCapability,
+  reorderCapabilities,
   /** 暴露 db 实例用于测试 reset */
   _db: db,
 };
