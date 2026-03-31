@@ -110,4 +110,43 @@ describe('StorageService', () => {
       expect(updated!.updatedAt).not.toBe(record.updatedAt);
     });
   });
+
+  describe('schema v2 — description and slots', () => {
+    it('创建 Work Unit 后 description 默认为空字符串', async () => {
+      const record = await StorageService.createWorkUnit('带描述');
+      expect(record.description).toBe('');
+    });
+
+    it('创建 Work Unit 后 slots 默认为空数组', async () => {
+      const record = await StorageService.createWorkUnit('带槽位');
+      expect(record.slots).toEqual([]);
+    });
+  });
+
+  describe('updateWorkUnitInfo', () => {
+    it('更新名称和描述', async () => {
+      const record = await StorageService.createWorkUnit('原始名');
+      await new Promise((r) => setTimeout(r, 10));
+      await StorageService.updateWorkUnitInfo(record.id, {
+        name: '新名称',
+        description: '新描述',
+      });
+
+      const updated = await StorageService.getWorkUnit(record.id);
+      expect(updated!.name).toBe('新名称');
+      expect(updated!.description).toBe('新描述');
+      expect(updated!.updatedAt).not.toBe(record.updatedAt);
+    });
+
+    it('只更新描述，名称不变', async () => {
+      const record = await StorageService.createWorkUnit('保持名称');
+      await StorageService.updateWorkUnitInfo(record.id, {
+        description: '只改描述',
+      });
+
+      const updated = await StorageService.getWorkUnit(record.id);
+      expect(updated!.name).toBe('保持名称');
+      expect(updated!.description).toBe('只改描述');
+    });
+  });
 });

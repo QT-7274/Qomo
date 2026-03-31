@@ -11,19 +11,24 @@
 
 import Dexie, { type EntityTable } from 'dexie';
 import type { SourceType, ISO8601 } from '../types/workUnit.types';
+import type { Slot } from '../types/slot.types';
 
 // ---------------------------------------------------------------------------
 // Work Unit 持久化记录（IndexedDB 表结构）
 // ---------------------------------------------------------------------------
 
-/** IndexedDB 中 Work Unit 的最小存储结构 */
+/** IndexedDB 中 Work Unit 的存储结构 */
 export interface WorkUnitRecord {
   /** 稳定的逻辑主键（UUID） */
   id: string;
   /** 用户可见名称 */
   name: string;
+  /** 描述信息 */
+  description: string;
   /** 来源类型 */
   sourceType: SourceType;
+  /** 结构化 Slot 列表（嵌套 JSON） */
+  slots: Slot[];
   /** 创建时间（ISO 8601） */
   createdAt: ISO8601;
   /** 最后修改时间（ISO 8601） */
@@ -41,6 +46,18 @@ class QomoDatabase extends Dexie {
     super('qomo');
     this.version(1).stores({
       workUnits: 'id, name, sourceType, createdAt, updatedAt',
+    });
+    this.version(2).stores({
+      workUnits: 'id, name, sourceType, createdAt, updatedAt',
+    }).upgrade((tx) => {
+      return tx.table('workUnits').toCollection().modify((wu) => {
+        if ((wu as Record<string, unknown>).description === undefined) {
+          (wu as Record<string, unknown>).description = '';
+        }
+        if ((wu as Record<string, unknown>).slots === undefined) {
+          (wu as Record<string, unknown>).slots = [];
+        }
+      });
     });
   }
 }
@@ -103,7 +120,9 @@ async function createWorkUnit(
   const record: WorkUnitRecord = {
     id: generateId(),
     name,
+    description: '',
     sourceType,
+    slots: [],
     createdAt: now,
     updatedAt: now,
   };
@@ -135,6 +154,19 @@ async function updateWorkUnit(
   });
 }
 
+/** 更新 Work Unit 基本信息（名称、描述） */
+async function updateWorkUnitInfo(
+  id: string,
+  updates: Partial<Pick<WorkUnitRecord, 'name' | 'description'>>,
+): Promise<void> {
+  await db.transaction('rw', db.workUnits, async () => {
+    await db.workUnits.update(id, {
+      ...updates,
+      updatedAt: nowISO(),
+    });
+  });
+}
+
 // ---------------------------------------------------------------------------
 // 导出
 // ---------------------------------------------------------------------------
@@ -145,6 +177,7 @@ export const StorageService = {
   createWorkUnit,
   deleteWorkUnit,
   updateWorkUnit,
+  updateWorkUnitInfo,
   /** 暴露 db 实例用于测试 reset */
   _db: db,
 };
