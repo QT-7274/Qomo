@@ -790,8 +790,13 @@ async function createSnapshot(workUnitId: string): Promise<WorkUnitVersionRecord
 
     await db.workUnitVersions.add(record);
 
-    if (existing.length >= MAX_SNAPSHOTS) {
-      const toDelete = existing.slice(0, existing.length - MAX_SNAPSHOTS + 1);
+    // 清理：添加后总数超过上限时删除版本号最小的
+    const allSnapshots = await db.workUnitVersions
+      .where('workUnitId').equals(workUnitId)
+      .toArray();
+    if (allSnapshots.length > MAX_SNAPSHOTS) {
+      allSnapshots.sort((a, b) => a.versionNumber - b.versionNumber);
+      const toDelete = allSnapshots.slice(0, allSnapshots.length - MAX_SNAPSHOTS);
       await db.workUnitVersions.bulkDelete(toDelete.map((s) => s.id));
     }
   });
