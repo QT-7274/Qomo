@@ -545,4 +545,92 @@ describe('StorageService', () => {
       expect(updated!.updatedAt).not.toBe(wu.updatedAt);
     });
   });
+
+  describe('ChecklistItem CRUD', () => {
+    async function createWuWithQualityConstraint() {
+      const wu = await StorageService.createWorkUnit('检查清单测试');
+      await StorageService.addConstraint(wu.id, {
+        name: '质量检查',
+        constraintType: 'quality',
+        content: '自检',
+        checklistItems: [],
+      });
+      const updated = await StorageService.getWorkUnit(wu.id);
+      return { workUnitId: wu.id, constraintId: updated!.constraints[0].id };
+    }
+
+    it('addChecklistItem 添加检查项', async () => {
+      const { workUnitId, constraintId } = await createWuWithQualityConstraint();
+      await StorageService.addChecklistItem(workUnitId, constraintId, {
+        text: '检查拼写',
+        required: true,
+      });
+
+      const wu = await StorageService.getWorkUnit(workUnitId);
+      const items = wu!.constraints[0].checklistItems!;
+      expect(items).toHaveLength(1);
+      expect(items[0].text).toBe('检查拼写');
+      expect(items[0].required).toBe(true);
+      expect(items[0].order).toBe(0);
+    });
+
+    it('addChecklistItem 自动递增 order', async () => {
+      const { workUnitId, constraintId } = await createWuWithQualityConstraint();
+      await StorageService.addChecklistItem(workUnitId, constraintId, { text: 'A', required: true });
+      await StorageService.addChecklistItem(workUnitId, constraintId, { text: 'B', required: false });
+
+      const wu = await StorageService.getWorkUnit(workUnitId);
+      const items = wu!.constraints[0].checklistItems!;
+      expect(items[0].order).toBe(0);
+      expect(items[1].order).toBe(1);
+    });
+
+    it('updateChecklistItem 修改检查项', async () => {
+      const { workUnitId, constraintId } = await createWuWithQualityConstraint();
+      await StorageService.addChecklistItem(workUnitId, constraintId, { text: '原始', required: false });
+
+      const wu = await StorageService.getWorkUnit(workUnitId);
+      const itemId = wu!.constraints[0].checklistItems![0].id;
+      await StorageService.updateChecklistItem(workUnitId, constraintId, itemId, {
+        text: '已修改',
+        required: true,
+      });
+
+      const updated = await StorageService.getWorkUnit(workUnitId);
+      const item = updated!.constraints[0].checklistItems![0];
+      expect(item.text).toBe('已修改');
+      expect(item.required).toBe(true);
+    });
+
+    it('deleteChecklistItem 删除检查项', async () => {
+      const { workUnitId, constraintId } = await createWuWithQualityConstraint();
+      await StorageService.addChecklistItem(workUnitId, constraintId, { text: 'A', required: true });
+      await StorageService.addChecklistItem(workUnitId, constraintId, { text: 'B', required: false });
+
+      const wu = await StorageService.getWorkUnit(workUnitId);
+      const itemId = wu!.constraints[0].checklistItems![0].id;
+      await StorageService.deleteChecklistItem(workUnitId, constraintId, itemId);
+
+      const updated = await StorageService.getWorkUnit(workUnitId);
+      expect(updated!.constraints[0].checklistItems).toHaveLength(1);
+      expect(updated!.constraints[0].checklistItems![0].text).toBe('B');
+    });
+
+    it('reorderChecklistItems 重排检查项', async () => {
+      const { workUnitId, constraintId } = await createWuWithQualityConstraint();
+      await StorageService.addChecklistItem(workUnitId, constraintId, { text: 'A', required: true });
+      await StorageService.addChecklistItem(workUnitId, constraintId, { text: 'B', required: false });
+
+      const wu = await StorageService.getWorkUnit(workUnitId);
+      const items = wu!.constraints[0].checklistItems!;
+      await StorageService.reorderChecklistItems(workUnitId, constraintId, [items[1].id, items[0].id]);
+
+      const updated = await StorageService.getWorkUnit(workUnitId);
+      const reordered = updated!.constraints[0].checklistItems!;
+      expect(reordered[0].text).toBe('B');
+      expect(reordered[0].order).toBe(0);
+      expect(reordered[1].text).toBe('A');
+      expect(reordered[1].order).toBe(1);
+    });
+  });
 });

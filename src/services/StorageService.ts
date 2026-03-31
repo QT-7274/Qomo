@@ -513,6 +513,116 @@ async function reorderConstraints(workUnitId: string, orderedIds: string[]): Pro
 }
 
 // ---------------------------------------------------------------------------
+// ChecklistItem CRUD (inside quality ConstraintPacks)
+// ---------------------------------------------------------------------------
+
+async function addChecklistItem(
+  workUnitId: string,
+  constraintId: string,
+  params: { text: string; required: boolean },
+): Promise<void> {
+  await db.transaction('rw', db.workUnits, async () => {
+    const wu = await db.workUnits.get(workUnitId);
+    if (!wu) throw new Error(`Work Unit ${workUnitId} 不存在`);
+
+    const cp = wu.constraints.find((c) => c.id === constraintId);
+    if (!cp) throw new Error(`Constraint ${constraintId} 不存在`);
+
+    if (!cp.checklistItems) cp.checklistItems = [];
+
+    const maxOrder = cp.checklistItems.length > 0
+      ? Math.max(...cp.checklistItems.map((i) => i.order))
+      : -1;
+
+    cp.checklistItems.push({
+      id: generateId(),
+      text: params.text,
+      required: params.required,
+      order: maxOrder + 1,
+    });
+
+    await db.workUnits.update(workUnitId, {
+      constraints: wu.constraints,
+      updatedAt: nowISO(),
+    });
+  });
+}
+
+async function updateChecklistItem(
+  workUnitId: string,
+  constraintId: string,
+  itemId: string,
+  params: { text?: string; required?: boolean },
+): Promise<void> {
+  await db.transaction('rw', db.workUnits, async () => {
+    const wu = await db.workUnits.get(workUnitId);
+    if (!wu) throw new Error(`Work Unit ${workUnitId} 不存在`);
+
+    const cp = wu.constraints.find((c) => c.id === constraintId);
+    if (!cp) throw new Error(`Constraint ${constraintId} 不存在`);
+
+    const item = cp.checklistItems?.find((i) => i.id === itemId);
+    if (!item) throw new Error(`ChecklistItem ${itemId} 不存在`);
+
+    if (params.text !== undefined) item.text = params.text;
+    if (params.required !== undefined) item.required = params.required;
+
+    await db.workUnits.update(workUnitId, {
+      constraints: wu.constraints,
+      updatedAt: nowISO(),
+    });
+  });
+}
+
+async function deleteChecklistItem(
+  workUnitId: string,
+  constraintId: string,
+  itemId: string,
+): Promise<void> {
+  await db.transaction('rw', db.workUnits, async () => {
+    const wu = await db.workUnits.get(workUnitId);
+    if (!wu) throw new Error(`Work Unit ${workUnitId} 不存在`);
+
+    const cp = wu.constraints.find((c) => c.id === constraintId);
+    if (!cp) throw new Error(`Constraint ${constraintId} 不存在`);
+
+    cp.checklistItems = (cp.checklistItems ?? []).filter((i) => i.id !== itemId);
+
+    await db.workUnits.update(workUnitId, {
+      constraints: wu.constraints,
+      updatedAt: nowISO(),
+    });
+  });
+}
+
+async function reorderChecklistItems(
+  workUnitId: string,
+  constraintId: string,
+  orderedIds: string[],
+): Promise<void> {
+  await db.transaction('rw', db.workUnits, async () => {
+    const wu = await db.workUnits.get(workUnitId);
+    if (!wu) throw new Error(`Work Unit ${workUnitId} 不存在`);
+
+    const cp = wu.constraints.find((c) => c.id === constraintId);
+    if (!cp) throw new Error(`Constraint ${constraintId} 不存在`);
+
+    const itemMap = new Map((cp.checklistItems ?? []).map((i) => [i.id, i]));
+    cp.checklistItems = orderedIds.map((id, index) => {
+      const item = itemMap.get(id);
+      if (!item) throw new Error(`ChecklistItem ${id} 不存在`);
+      item.order = index;
+      return item;
+    });
+
+    await db.workUnits.update(workUnitId, {
+      constraints: wu.constraints,
+      updatedAt: nowISO(),
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Clone
 // ---------------------------------------------------------------------------
 
@@ -584,6 +694,10 @@ export const StorageService = {
   updateConstraint,
   deleteConstraint,
   reorderConstraints,
+  addChecklistItem,
+  updateChecklistItem,
+  deleteChecklistItem,
+  reorderChecklistItems,
   cloneWorkUnit,
   /** 暴露 db 实例用于测试 reset */
   _db: db,
