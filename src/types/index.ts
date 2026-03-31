@@ -56,3 +56,8 @@ export type {
   ChecklistItem,
   ConstraintPack,
 } from './constraint.types';
+
+export type {
+  FillInMethod,
+  FillInDeclaration,
+} from './fillIn.types';
