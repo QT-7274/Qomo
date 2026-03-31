@@ -13,6 +13,7 @@ import Dexie, { type EntityTable } from 'dexie';
 import type { SourceType, ISO8601 } from '../types/workUnit.types';
 import type { Slot } from '../types/slot.types';
 import type { Capability } from '../types/capability.types';
+import type { ConstraintPack } from '../types/constraint.types';
 
 // ---------------------------------------------------------------------------
 // Work Unit 持久化记录（IndexedDB 表结构）
@@ -30,6 +31,8 @@ export interface WorkUnitRecord {
   sourceType: SourceType;
   /** 结构化 Slot 列表（嵌套 JSON） */
   slots: Slot[];
+  /** 约束包列表（嵌套 JSON） */
+  constraints: ConstraintPack[];
   /** 创建时间（ISO 8601） */
   createdAt: ISO8601;
   /** 最后修改时间（ISO 8601） */
@@ -57,6 +60,15 @@ class QomoDatabase extends Dexie {
         }
         if ((wu as Record<string, unknown>).slots === undefined) {
           (wu as Record<string, unknown>).slots = [];
+        }
+      });
+    });
+    this.version(3).stores({
+      workUnits: 'id, name, sourceType, createdAt, updatedAt',
+    }).upgrade((tx) => {
+      return tx.table('workUnits').toCollection().modify((wu) => {
+        if ((wu as Record<string, unknown>).constraints === undefined) {
+          (wu as Record<string, unknown>).constraints = [];
         }
       });
     });
@@ -124,6 +136,7 @@ async function createWorkUnit(
     description: '',
     sourceType,
     slots: [],
+    constraints: [],
     createdAt: now,
     updatedAt: now,
   };
@@ -383,6 +396,123 @@ async function reorderCapabilities(
 }
 
 // ---------------------------------------------------------------------------
+// Constraint CRUD
+// ---------------------------------------------------------------------------
+
+/** addConstraint 的参数 */
+interface AddConstraintParams {
+  name: string;
+  constraintType: import('../types/constraint.types').ConstraintType;
+  content: string;
+  outputFormat?: import('../types/constraint.types').OutputFormatType;
+  lengthLimit?: import('../types/constraint.types').LengthLimit;
+  checklistItems?: Array<{ text: string; required: boolean }>;
+}
+
+/** 为 Work Unit 添加约束包 */
+async function addConstraint(workUnitId: string, params: AddConstraintParams): Promise<void> {
+  await db.transaction('rw', db.workUnits, async () => {
+    const wu = await db.workUnits.get(workUnitId);
+    if (!wu) throw new Error(`Work Unit ${workUnitId} 不存在`);
+
+    const maxOrder = wu.constraints.length > 0
+      ? Math.max(...wu.constraints.map((c) => c.order))
+      : -1;
+
+    const newConstraint: ConstraintPack = {
+      id: generateId(),
+      name: params.name,
+      constraintType: params.constraintType,
+      content: params.content,
+      order: maxOrder + 1,
+      outputFormat: params.outputFormat,
+      lengthLimit: params.lengthLimit,
+      checklistItems: params.checklistItems?.map((item, index) => ({
+        id: generateId(),
+        text: item.text,
+        required: item.required,
+        order: index,
+      })),
+    };
+
+    wu.constraints.push(newConstraint);
+    await db.workUnits.update(workUnitId, {
+      constraints: wu.constraints,
+      updatedAt: nowISO(),
+    });
+  });
+}
+
+/** updateConstraint 的参数 */
+interface UpdateConstraintParams {
+  name?: string;
+  content?: string;
+  outputFormat?: import('../types/constraint.types').OutputFormatType;
+  lengthLimit?: import('../types/constraint.types').LengthLimit;
+}
+
+/** 更新约束包属性 */
+async function updateConstraint(
+  workUnitId: string,
+  constraintId: string,
+  params: UpdateConstraintParams,
+): Promise<void> {
+  await db.transaction('rw', db.workUnits, async () => {
+    const wu = await db.workUnits.get(workUnitId);
+    if (!wu) throw new Error(`Work Unit ${workUnitId} 不存在`);
+
+    const constraint = wu.constraints.find((c) => c.id === constraintId);
+    if (!constraint) throw new Error(`Constraint ${constraintId} 不存在`);
+
+    if (params.name !== undefined) constraint.name = params.name;
+    if (params.content !== undefined) constraint.content = params.content;
+    if (params.outputFormat !== undefined) constraint.outputFormat = params.outputFormat;
+    if (params.lengthLimit !== undefined) constraint.lengthLimit = params.lengthLimit;
+
+    await db.workUnits.update(workUnitId, {
+      constraints: wu.constraints,
+      updatedAt: nowISO(),
+    });
+  });
+}
+
+/** 删除约束包 */
+async function deleteConstraint(workUnitId: string, constraintId: string): Promise<void> {
+  await db.transaction('rw', db.workUnits, async () => {
+    const wu = await db.workUnits.get(workUnitId);
+    if (!wu) throw new Error(`Work Unit ${workUnitId} 不存在`);
+
+    wu.constraints = wu.constraints.filter((c) => c.id !== constraintId);
+
+    await db.workUnits.update(workUnitId, {
+      constraints: wu.constraints,
+      updatedAt: nowISO(),
+    });
+  });
+}
+
+/** 按新的 ID 顺序重排约束包 */
+async function reorderConstraints(workUnitId: string, orderedIds: string[]): Promise<void> {
+  await db.transaction('rw', db.workUnits, async () => {
+    const wu = await db.workUnits.get(workUnitId);
+    if (!wu) throw new Error(`Work Unit ${workUnitId} 不存在`);
+
+    const constraintMap = new Map(wu.constraints.map((c) => [c.id, c]));
+    wu.constraints = orderedIds.map((id, index) => {
+      const constraint = constraintMap.get(id);
+      if (!constraint) throw new Error(`Constraint ${id} 不存在`);
+      constraint.order = index;
+      return constraint;
+    });
+
+    await db.workUnits.update(workUnitId, {
+      constraints: wu.constraints,
+      updatedAt: nowISO(),
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Clone
 // ---------------------------------------------------------------------------
 
@@ -405,12 +535,23 @@ async function cloneWorkUnit(sourceId: string): Promise<WorkUnitRecord> {
       })),
     }));
 
+    // 深拷贝 Constraints，为每个约束包和检查项分配新 ID
+    const clonedConstraints: ConstraintPack[] = source.constraints.map((cp) => ({
+      ...cp,
+      id: generateId(),
+      checklistItems: cp.checklistItems?.map((ci) => ({
+        ...ci,
+        id: generateId(),
+      })),
+    }));
+
     cloned = {
       id: generateId(),
       name: `${source.name}（副本）`,
       description: source.description,
       sourceType: 'cloned_from',
       slots: clonedSlots,
+      constraints: clonedConstraints,
       createdAt: now,
       updatedAt: now,
     };
@@ -439,6 +580,10 @@ export const StorageService = {
   updateCapability,
   deleteCapability,
   reorderCapabilities,
+  addConstraint,
+  updateConstraint,
+  deleteConstraint,
+  reorderConstraints,
   cloneWorkUnit,
   /** 暴露 db 实例用于测试 reset */
   _db: db,

@@ -421,4 +421,128 @@ describe('StorageService', () => {
       ).rejects.toThrow('Work Unit nonexistent 不存在');
     });
   });
+
+  describe('schema v3 — constraints', () => {
+    it('创建 Work Unit 后 constraints 默认为空数组', async () => {
+      const record = await StorageService.createWorkUnit('带约束');
+      expect(record.constraints).toEqual([]);
+    });
+  });
+
+  describe('Constraint CRUD', () => {
+    it('addConstraint 添加约束包', async () => {
+      const wu = await StorageService.createWorkUnit('约束测试');
+      await StorageService.addConstraint(wu.id, {
+        name: '输出格式',
+        constraintType: 'output',
+        content: '使用 Markdown',
+      });
+
+      const updated = await StorageService.getWorkUnit(wu.id);
+      expect(updated!.constraints).toHaveLength(1);
+      expect(updated!.constraints[0].name).toBe('输出格式');
+      expect(updated!.constraints[0].constraintType).toBe('output');
+      expect(updated!.constraints[0].content).toBe('使用 Markdown');
+      expect(updated!.constraints[0].order).toBe(0);
+      expect(updated!.constraints[0].id).toBeTruthy();
+    });
+
+    it('addConstraint output 类型含格式和长度限制', async () => {
+      const wu = await StorageService.createWorkUnit('输出约束');
+      await StorageService.addConstraint(wu.id, {
+        name: 'JSON 输出',
+        constraintType: 'output',
+        content: '输出 JSON',
+        outputFormat: 'json',
+        lengthLimit: { unit: 'words', max: 500 },
+      });
+
+      const updated = await StorageService.getWorkUnit(wu.id);
+      expect(updated!.constraints[0].outputFormat).toBe('json');
+      expect(updated!.constraints[0].lengthLimit).toEqual({ unit: 'words', max: 500 });
+    });
+
+    it('addConstraint quality 类型含检查清单', async () => {
+      const wu = await StorageService.createWorkUnit('质量约束');
+      await StorageService.addConstraint(wu.id, {
+        name: '质量检查',
+        constraintType: 'quality',
+        content: '自检清单',
+        checklistItems: [
+          { text: '检查拼写', required: true },
+          { text: '验证引用', required: false },
+        ],
+      });
+
+      const updated = await StorageService.getWorkUnit(wu.id);
+      const items = updated!.constraints[0].checklistItems!;
+      expect(items).toHaveLength(2);
+      expect(items[0].text).toBe('检查拼写');
+      expect(items[0].required).toBe(true);
+      expect(items[0].order).toBe(0);
+      expect(items[1].order).toBe(1);
+      expect(items[0].id).toBeTruthy();
+    });
+
+    it('addConstraint 自动递增 order', async () => {
+      const wu = await StorageService.createWorkUnit('排序');
+      await StorageService.addConstraint(wu.id, { name: 'A', constraintType: 'output', content: 'a' });
+      await StorageService.addConstraint(wu.id, { name: 'B', constraintType: 'boundary', content: 'b' });
+
+      const updated = await StorageService.getWorkUnit(wu.id);
+      expect(updated!.constraints[0].order).toBe(0);
+      expect(updated!.constraints[1].order).toBe(1);
+    });
+
+    it('updateConstraint 修改属性', async () => {
+      const wu = await StorageService.createWorkUnit('编辑约束');
+      await StorageService.addConstraint(wu.id, { name: '原始', constraintType: 'boundary', content: '旧内容' });
+
+      const added = await StorageService.getWorkUnit(wu.id);
+      const cId = added!.constraints[0].id;
+      await StorageService.updateConstraint(wu.id, cId, { name: '已修改', content: '新内容' });
+
+      const updated = await StorageService.getWorkUnit(wu.id);
+      expect(updated!.constraints[0].name).toBe('已修改');
+      expect(updated!.constraints[0].content).toBe('新内容');
+    });
+
+    it('deleteConstraint 删除约束包', async () => {
+      const wu = await StorageService.createWorkUnit('删除约束');
+      await StorageService.addConstraint(wu.id, { name: 'A', constraintType: 'output', content: 'a' });
+
+      const added = await StorageService.getWorkUnit(wu.id);
+      const cId = added!.constraints[0].id;
+      await StorageService.deleteConstraint(wu.id, cId);
+
+      const updated = await StorageService.getWorkUnit(wu.id);
+      expect(updated!.constraints).toHaveLength(0);
+    });
+
+    it('reorderConstraints 重新排序', async () => {
+      const wu = await StorageService.createWorkUnit('约束排序');
+      await StorageService.addConstraint(wu.id, { name: 'A', constraintType: 'output', content: 'a' });
+      await StorageService.addConstraint(wu.id, { name: 'B', constraintType: 'boundary', content: 'b' });
+      await StorageService.addConstraint(wu.id, { name: 'C', constraintType: 'quality', content: 'c' });
+
+      const before = await StorageService.getWorkUnit(wu.id);
+      const ids = before!.constraints.map((c) => c.id);
+      await StorageService.reorderConstraints(wu.id, [ids[2], ids[0], ids[1]]);
+
+      const updated = await StorageService.getWorkUnit(wu.id);
+      expect(updated!.constraints[0].name).toBe('C');
+      expect(updated!.constraints[0].order).toBe(0);
+      expect(updated!.constraints[1].name).toBe('A');
+      expect(updated!.constraints[2].name).toBe('B');
+    });
+
+    it('addConstraint 刷新 updatedAt', async () => {
+      const wu = await StorageService.createWorkUnit('时间');
+      await new Promise((r) => setTimeout(r, 10));
+      await StorageService.addConstraint(wu.id, { name: 'T', constraintType: 'output', content: 't' });
+
+      const updated = await StorageService.getWorkUnit(wu.id);
+      expect(updated!.updatedAt).not.toBe(wu.updatedAt);
+    });
+  });
 });
