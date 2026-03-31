@@ -14,6 +14,7 @@ import type { SourceType, ISO8601 } from '../types/workUnit.types';
 import type { Slot } from '../types/slot.types';
 import type { Capability } from '../types/capability.types';
 import type { ConstraintPack } from '../types/constraint.types';
+import type { FillInDeclaration } from '../types/fillIn.types';
 
 // ---------------------------------------------------------------------------
 // Work Unit 持久化记录（IndexedDB 表结构）
@@ -72,6 +73,11 @@ class QomoDatabase extends Dexie {
         }
       });
     });
+    this.version(4).stores({
+      workUnits: 'id, name, sourceType, createdAt, updatedAt',
+    });
+    // No data migration needed: fillIn is an optional field inside nested Slot JSON.
+    // Existing Slots naturally have fillIn === undefined.
   }
 }
 
@@ -396,6 +402,53 @@ async function reorderCapabilities(
 }
 
 // ---------------------------------------------------------------------------
+// Slot FillIn CRUD
+// ---------------------------------------------------------------------------
+
+/** 为 Slot 设置待补齐声明 */
+async function setSlotFillIn(
+  workUnitId: string,
+  slotId: string,
+  fillIn: FillInDeclaration,
+): Promise<void> {
+  await db.transaction('rw', db.workUnits, async () => {
+    const wu = await db.workUnits.get(workUnitId);
+    if (!wu) throw new Error(`Work Unit ${workUnitId} 不存在`);
+
+    const slot = wu.slots.find((s) => s.id === slotId);
+    if (!slot) throw new Error(`Slot ${slotId} 不存在`);
+
+    slot.fillIn = fillIn;
+
+    await db.workUnits.update(workUnitId, {
+      slots: wu.slots,
+      updatedAt: nowISO(),
+    });
+  });
+}
+
+/** 清除 Slot 的待补齐声明 */
+async function clearSlotFillIn(
+  workUnitId: string,
+  slotId: string,
+): Promise<void> {
+  await db.transaction('rw', db.workUnits, async () => {
+    const wu = await db.workUnits.get(workUnitId);
+    if (!wu) throw new Error(`Work Unit ${workUnitId} 不存在`);
+
+    const slot = wu.slots.find((s) => s.id === slotId);
+    if (!slot) throw new Error(`Slot ${slotId} 不存在`);
+
+    delete slot.fillIn;
+
+    await db.workUnits.update(workUnitId, {
+      slots: wu.slots,
+      updatedAt: nowISO(),
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Constraint CRUD
 // ---------------------------------------------------------------------------
 
@@ -698,6 +751,8 @@ export const StorageService = {
   updateChecklistItem,
   deleteChecklistItem,
   reorderChecklistItems,
+  setSlotFillIn,
+  clearSlotFillIn,
   cloneWorkUnit,
   /** 暴露 db 实例用于测试 reset */
   _db: db,

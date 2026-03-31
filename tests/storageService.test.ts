@@ -666,4 +666,105 @@ describe('StorageService', () => {
       expect(reordered[1].order).toBe(1);
     });
   });
+
+  describe('setSlotFillIn', () => {
+    it('为 Slot 设置待补齐声明', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      await StorageService.addSlot(wu.id, { name: '目标', slotType: 'context', required: true });
+      const after1 = await StorageService.getWorkUnit(wu.id);
+      const slotId = after1!.slots[0].id;
+
+      await StorageService.setSlotFillIn(wu.id, slotId, { method: 'user-confirm', hint: '请描述任务目标' });
+
+      const after2 = await StorageService.getWorkUnit(wu.id);
+      const slot = after2!.slots[0];
+      expect(slot.fillIn).toBeDefined();
+      expect(slot.fillIn!.method).toBe('user-confirm');
+      expect(slot.fillIn!.hint).toBe('请描述任务目标');
+    });
+
+    it('更新已有的待补齐声明', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      await StorageService.addSlot(wu.id, { name: '文件', slotType: 'context', required: false });
+      const after1 = await StorageService.getWorkUnit(wu.id);
+      const slotId = after1!.slots[0].id;
+
+      await StorageService.setSlotFillIn(wu.id, slotId, { method: 'auto' });
+      await StorageService.setSlotFillIn(wu.id, slotId, { method: 'manual', hint: '手动补充' });
+
+      const after2 = await StorageService.getWorkUnit(wu.id);
+      expect(after2!.slots[0].fillIn!.method).toBe('manual');
+      expect(after2!.slots[0].fillIn!.hint).toBe('手动补充');
+    });
+
+    it('设置后刷新 updatedAt', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      await StorageService.addSlot(wu.id, { name: '目标', slotType: 'context', required: true });
+      const after1 = await StorageService.getWorkUnit(wu.id);
+      const slotId = after1!.slots[0].id;
+      const oldUpdated = after1!.updatedAt;
+
+      await new Promise((r) => setTimeout(r, 10));
+      await StorageService.setSlotFillIn(wu.id, slotId, { method: 'auto' });
+
+      const after2 = await StorageService.getWorkUnit(wu.id);
+      expect(after2!.updatedAt > oldUpdated).toBe(true);
+    });
+
+    it('Work Unit 不存在时抛错', async () => {
+      await expect(
+        StorageService.setSlotFillIn('nonexistent', 'slot-1', { method: 'auto' })
+      ).rejects.toThrow('不存在');
+    });
+
+    it('Slot 不存在时抛错', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      await expect(
+        StorageService.setSlotFillIn(wu.id, 'nonexistent', { method: 'auto' })
+      ).rejects.toThrow('不存在');
+    });
+  });
+
+  describe('clearSlotFillIn', () => {
+    it('清除已有的待补齐声明', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      await StorageService.addSlot(wu.id, { name: '目标', slotType: 'context', required: true });
+      const after1 = await StorageService.getWorkUnit(wu.id);
+      const slotId = after1!.slots[0].id;
+
+      await StorageService.setSlotFillIn(wu.id, slotId, { method: 'manual', hint: '手动' });
+      await StorageService.clearSlotFillIn(wu.id, slotId);
+
+      const after2 = await StorageService.getWorkUnit(wu.id);
+      expect(after2!.slots[0].fillIn).toBeUndefined();
+    });
+
+    it('无待补齐声明时清除也不报错', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      await StorageService.addSlot(wu.id, { name: '目标', slotType: 'context', required: true });
+      const after1 = await StorageService.getWorkUnit(wu.id);
+      const slotId = after1!.slots[0].id;
+
+      await expect(
+        StorageService.clearSlotFillIn(wu.id, slotId)
+      ).resolves.not.toThrow();
+    });
+  });
+
+  describe('cloneWorkUnit with fillIn', () => {
+    it('复制时保留 Slot 的 fillIn 声明', async () => {
+      const wu = await StorageService.createWorkUnit('源');
+      await StorageService.addSlot(wu.id, { name: '任务目标', slotType: 'context', required: true });
+      const after1 = await StorageService.getWorkUnit(wu.id);
+      const slotId = after1!.slots[0].id;
+      await StorageService.setSlotFillIn(wu.id, slotId, { method: 'user-confirm', hint: '描述任务' });
+
+      const cloned = await StorageService.cloneWorkUnit(wu.id);
+
+      expect(cloned.slots[0].fillIn).toBeDefined();
+      expect(cloned.slots[0].fillIn!.method).toBe('user-confirm');
+      expect(cloned.slots[0].fillIn!.hint).toBe('描述任务');
+      expect(cloned.slots[0].id).not.toBe(slotId);
+    });
+  });
 });
