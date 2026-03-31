@@ -55,7 +55,7 @@ development_status:
   w2b-constraint-and-output-semantics-declaration: done
   w2c-runtime-fill-ins-semantics-declaration: done
   w3-handoff-readiness-preview: done
-  w4-versioned-snapshot-and-editing-continuity: backlog
+  w4-versioned-snapshot-and-editing-continuity: done
   epic-1-retrospective: optional
 
   epic-2: backlog
