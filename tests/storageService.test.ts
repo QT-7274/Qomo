@@ -149,4 +149,114 @@ describe('StorageService', () => {
       expect(updated!.description).toBe('只改描述');
     });
   });
+
+  describe('Slot CRUD', () => {
+    it('addSlot 添加 Slot 到 Work Unit', async () => {
+      const wu = await StorageService.createWorkUnit('带Slot');
+      await StorageService.addSlot(wu.id, {
+        name: '上下文',
+        slotType: 'context',
+        description: '背景信息',
+        required: true,
+      });
+
+      const updated = await StorageService.getWorkUnit(wu.id);
+      expect(updated!.slots).toHaveLength(1);
+      expect(updated!.slots[0].name).toBe('上下文');
+      expect(updated!.slots[0].slotType).toBe('context');
+      expect(updated!.slots[0].description).toBe('背景信息');
+      expect(updated!.slots[0].required).toBe(true);
+      expect(updated!.slots[0].capabilities).toEqual([]);
+      expect(updated!.slots[0].id).toBeTruthy();
+    });
+
+    it('addSlot 不指定 description 时为 undefined', async () => {
+      const wu = await StorageService.createWorkUnit('无描述Slot');
+      await StorageService.addSlot(wu.id, {
+        name: '规则',
+        slotType: 'rule',
+        required: false,
+      });
+
+      const updated = await StorageService.getWorkUnit(wu.id);
+      expect(updated!.slots[0].description).toBeUndefined();
+    });
+
+    it('updateSlot 修改 Slot 属性', async () => {
+      const wu = await StorageService.createWorkUnit('编辑Slot');
+      await StorageService.addSlot(wu.id, {
+        name: '原始',
+        slotType: 'context',
+        required: false,
+      });
+
+      const added = await StorageService.getWorkUnit(wu.id);
+      const slotId = added!.slots[0].id;
+      await StorageService.updateSlot(wu.id, slotId, {
+        name: '已修改',
+        required: true,
+      });
+
+      const updated = await StorageService.getWorkUnit(wu.id);
+      expect(updated!.slots[0].name).toBe('已修改');
+      expect(updated!.slots[0].required).toBe(true);
+      expect(updated!.slots[0].slotType).toBe('context');
+    });
+
+    it('deleteSlot 删除无 Capability 的 Slot', async () => {
+      const wu = await StorageService.createWorkUnit('删除Slot');
+      await StorageService.addSlot(wu.id, {
+        name: '待删',
+        slotType: 'custom',
+        required: false,
+      });
+
+      const added = await StorageService.getWorkUnit(wu.id);
+      const slotId = added!.slots[0].id;
+      await StorageService.deleteSlot(wu.id, slotId);
+
+      const updated = await StorageService.getWorkUnit(wu.id);
+      expect(updated!.slots).toHaveLength(0);
+    });
+
+    it('deleteSlot 拒绝删除有 Capability 的 Slot', async () => {
+      const wu = await StorageService.createWorkUnit('有能力Slot');
+      await StorageService.addSlot(wu.id, {
+        name: '有内容',
+        slotType: 'capability',
+        required: true,
+      });
+
+      const added = await StorageService.getWorkUnit(wu.id);
+      const slotId = added!.slots[0].id;
+
+      // Manually add a capability to the slot for testing
+      // (addCapability will be implemented in Task 4, so we do it manually here)
+      const wuRecord = await StorageService.getWorkUnit(wu.id);
+      wuRecord!.slots[0].capabilities.push({
+        id: 'test-cap-1',
+        name: '能力A',
+        content: '内容',
+        order: 0,
+      });
+      await StorageService._db.workUnits.update(wu.id, { slots: wuRecord!.slots });
+
+      await expect(
+        StorageService.deleteSlot(wu.id, slotId),
+      ).rejects.toThrow('Slot 下仍有 Capability，无法删除');
+    });
+
+    it('addSlot 刷新 updatedAt', async () => {
+      const wu = await StorageService.createWorkUnit('时间测试');
+      await new Promise((r) => setTimeout(r, 10));
+      await StorageService.addSlot(wu.id, {
+        name: 'T',
+        slotType: 'context',
+        required: false,
+      });
+
+      const updated = await StorageService.getWorkUnit(wu.id);
+      expect(updated!.updatedAt).not.toBe(wu.updatedAt);
+    });
+  });
 });

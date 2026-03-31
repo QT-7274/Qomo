@@ -168,6 +168,95 @@ async function updateWorkUnitInfo(
 }
 
 // ---------------------------------------------------------------------------
+// Slot CRUD
+// ---------------------------------------------------------------------------
+
+/** addSlot 的参数 */
+interface AddSlotParams {
+  name: string;
+  slotType: import('../types/slot.types').SlotType;
+  description?: string;
+  required: boolean;
+}
+
+/** 为 Work Unit 添加一个 Slot */
+async function addSlot(workUnitId: string, params: AddSlotParams): Promise<void> {
+  await db.transaction('rw', db.workUnits, async () => {
+    const wu = await db.workUnits.get(workUnitId);
+    if (!wu) throw new Error(`Work Unit ${workUnitId} 不存在`);
+
+    const newSlot: Slot = {
+      id: generateId(),
+      name: params.name,
+      slotType: params.slotType,
+      description: params.description,
+      required: params.required,
+      capabilities: [],
+    };
+
+    wu.slots.push(newSlot);
+    await db.workUnits.update(workUnitId, {
+      slots: wu.slots,
+      updatedAt: nowISO(),
+    });
+  });
+}
+
+/** updateSlot 的参数 */
+interface UpdateSlotParams {
+  name?: string;
+  slotType?: import('../types/slot.types').SlotType;
+  description?: string;
+  required?: boolean;
+}
+
+/** 更新 Slot 属性 */
+async function updateSlot(
+  workUnitId: string,
+  slotId: string,
+  params: UpdateSlotParams,
+): Promise<void> {
+  await db.transaction('rw', db.workUnits, async () => {
+    const wu = await db.workUnits.get(workUnitId);
+    if (!wu) throw new Error(`Work Unit ${workUnitId} 不存在`);
+
+    const slot = wu.slots.find((s) => s.id === slotId);
+    if (!slot) throw new Error(`Slot ${slotId} 不存在`);
+
+    if (params.name !== undefined) slot.name = params.name;
+    if (params.slotType !== undefined) slot.slotType = params.slotType;
+    if (params.description !== undefined) slot.description = params.description;
+    if (params.required !== undefined) slot.required = params.required;
+
+    await db.workUnits.update(workUnitId, {
+      slots: wu.slots,
+      updatedAt: nowISO(),
+    });
+  });
+}
+
+/** 删除 Slot（仅当无 Capability 时允许） */
+async function deleteSlot(workUnitId: string, slotId: string): Promise<void> {
+  await db.transaction('rw', db.workUnits, async () => {
+    const wu = await db.workUnits.get(workUnitId);
+    if (!wu) throw new Error(`Work Unit ${workUnitId} 不存在`);
+
+    const slotIndex = wu.slots.findIndex((s) => s.id === slotId);
+    if (slotIndex === -1) throw new Error(`Slot ${slotId} 不存在`);
+
+    if (wu.slots[slotIndex].capabilities.length > 0) {
+      throw new Error('Slot 下仍有 Capability，无法删除');
+    }
+
+    wu.slots.splice(slotIndex, 1);
+    await db.workUnits.update(workUnitId, {
+      slots: wu.slots,
+      updatedAt: nowISO(),
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
 // 导出
 // ---------------------------------------------------------------------------
 
@@ -178,6 +267,9 @@ export const StorageService = {
   deleteWorkUnit,
   updateWorkUnit,
   updateWorkUnitInfo,
+  addSlot,
+  updateSlot,
+  deleteSlot,
   /** 暴露 db 实例用于测试 reset */
   _db: db,
 };
