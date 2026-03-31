@@ -39,3 +39,12 @@ export type {
   ObservationEvent,
   AnyObservationEvent,
 } from './observation.types';
+
+export type {
+  Capability,
+} from './capability.types';
+
+export type {
+  SlotType,
+  Slot,
+} from './slot.types';
