@@ -420,6 +420,39 @@ describe('StorageService', () => {
         StorageService.cloneWorkUnit('nonexistent'),
       ).rejects.toThrow('Work Unit nonexistent 不存在');
     });
+
+    it('副本包含深拷贝的约束（含检查清单）', async () => {
+      const original = await StorageService.createWorkUnit('带约束原始');
+      await StorageService.addConstraint(original.id, {
+        name: '质量检查',
+        constraintType: 'quality',
+        content: '自检',
+        checklistItems: [{ text: '检查拼写', required: true }],
+      });
+      await StorageService.addConstraint(original.id, {
+        name: '输出格式',
+        constraintType: 'output',
+        content: 'Markdown',
+        outputFormat: 'markdown',
+        lengthLimit: { unit: 'words', max: 200 },
+      });
+
+      const clone = await StorageService.cloneWorkUnit(original.id);
+
+      expect(clone.constraints).toHaveLength(2);
+      expect(clone.constraints[0].name).toBe('质量检查');
+      expect(clone.constraints[0].checklistItems).toHaveLength(1);
+      expect(clone.constraints[0].checklistItems![0].text).toBe('检查拼写');
+      expect(clone.constraints[1].outputFormat).toBe('markdown');
+      expect(clone.constraints[1].lengthLimit).toEqual({ unit: 'words', max: 200 });
+
+      // 验证 ID 不同
+      const origWu = await StorageService.getWorkUnit(original.id);
+      expect(clone.constraints[0].id).not.toBe(origWu!.constraints[0].id);
+      expect(clone.constraints[0].checklistItems![0].id).not.toBe(
+        origWu!.constraints[0].checklistItems![0].id,
+      );
+    });
   });
 
   describe('schema v3 — constraints', () => {
