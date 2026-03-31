@@ -1,6 +1,6 @@
 # Story W2b: 约束与输出语义声明
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -212,3 +212,17 @@ Claude Opus 4.6 (1M context)
 - 目标 story：`w2b-constraint-and-output-semantics-declaration`
 
 ### File List
+
+**新增文件：**
+- `src/types/constraint.types.ts` — 约束类型定义（ConstraintType + ConstraintPack + ChecklistItem + LengthLimit + OutputFormatType）
+- `tests/constraint.types.test.ts` — 类型契约测试（7 tests）
+
+**修改文件：**
+- `src/types/index.ts` — 新增约束类型 barrel export
+- `src/services/StorageService.ts` — schema v3 + constraints 字段 + 约束包 CRUD + 检查项 CRUD + clone 深拷贝约束
+- `src/hooks/useWorkUnitEditor.ts` — 增加 8 个约束/检查项操作方法
+- `src/components/WorkUnitDetail/WorkUnitDetailComponent.tsx` — 增加约束编辑面板（添加/删除/排序/类型标签）
+- `tests/storageService.test.ts` — 增加约束 CRUD、检查项 CRUD、clone 约束测试（+15 tests）
+- `tests/workUnitDetailComponent.test.tsx` — 增加约束面板渲染测试（+4 tests）
+
+**测试统计：** 133 tests（W2a 的 107 + W2b 新增 26），全部通过。
