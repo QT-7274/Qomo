@@ -9,7 +9,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useWorkUnitEditor } from '../../hooks/useWorkUnitEditor';
-import type { SlotType, Slot, Capability, ConstraintType, ConstraintPack } from '../../types';
+import type { SlotType, Slot, Capability, ConstraintType, ConstraintPack, FillInMethod } from '../../types';
 
 // ---------------------------------------------------------------------------
 // 常量
@@ -32,6 +32,14 @@ const constraintTypeLabels: Record<ConstraintType, string> = {
 };
 
 const constraintTypeOptions: ConstraintType[] = ['output', 'boundary', 'quality'];
+
+const fillInMethodLabels: Record<FillInMethod, string> = {
+  auto: '自动提取',
+  'user-confirm': '用户确认',
+  manual: '手动输入',
+};
+
+const fillInMethodOptions: FillInMethod[] = ['auto', 'user-confirm', 'manual'];
 
 // ---------------------------------------------------------------------------
 // 组件
@@ -322,6 +330,8 @@ export function WorkUnitDetailComponent() {
               <span style={{ fontWeight: 600 }}>{slot.name}</span>
               <span style={tagStyle}>{slotTypeLabels[slot.slotType]}</span>
               {slot.required && <span style={requiredTagStyle}>必需</span>}
+              {slot.fillIn && <span style={fillInTagStyle}>待补齐</span>}
+              {slot.fillIn && <span style={fillInMethodTagStyle}>{slot.fillIn.method}</span>}
               <button
                 type="button"
                 style={btnDanger}
@@ -519,6 +529,42 @@ export function WorkUnitDetailComponent() {
           <p style={slotDescStyle}>{cp.content}</p>
         </div>
       ))}
+
+      {/* 待补齐摘要 */}
+      {(() => {
+        const fillInSlots = wu.slots.filter((s) => s.fillIn);
+        if (fillInSlots.length === 0) return null;
+
+        const byMethod: Record<string, typeof fillInSlots> = {};
+        for (const s of fillInSlots) {
+          const m = s.fillIn!.method;
+          if (!byMethod[m]) byMethod[m] = [];
+          byMethod[m].push(s);
+        }
+
+        return (
+          <>
+            <div style={{ ...sectionHeaderStyle, marginTop: '2rem' }}>
+              <span style={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                待补齐项 ({fillInSlots.length})
+              </span>
+            </div>
+            <div style={summaryCardStyle}>
+              <div style={summaryHeaderStyle}>待补齐摘要</div>
+              {fillInMethodOptions.map((method) => {
+                const slots = byMethod[method];
+                if (!slots || slots.length === 0) return null;
+                return (
+                  <div key={method} style={summaryItemStyle}>
+                    <span style={fillInMethodTagStyle}>{fillInMethodLabels[method]}</span>
+                    {' '}({slots.length}): {slots.map((s) => s.name).join('、')}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        );
+      })()}
     </div>
   );
 }
@@ -759,4 +805,41 @@ const capActionsStyle: React.CSSProperties = {
   display: 'flex',
   gap: '0.25rem',
   flexShrink: 0,
+};
+
+const fillInTagStyle: React.CSSProperties = {
+  padding: '0.15rem 0.5rem',
+  background: '#bee3f8',
+  borderRadius: '4px',
+  fontSize: '0.75rem',
+  color: '#2b6cb0',
+};
+
+const fillInMethodTagStyle: React.CSSProperties = {
+  padding: '0.15rem 0.5rem',
+  background: '#e9d8fd',
+  borderRadius: '4px',
+  fontSize: '0.75rem',
+  color: '#6b46c1',
+};
+
+const summaryCardStyle: React.CSSProperties = {
+  padding: '1rem',
+  background: '#ebf8ff',
+  borderRadius: '8px',
+  marginBottom: '0.75rem',
+  border: '1px solid #bee3f8',
+};
+
+const summaryHeaderStyle: React.CSSProperties = {
+  fontWeight: 600,
+  fontSize: '1rem',
+  marginBottom: '0.5rem',
+  color: '#2b6cb0',
+};
+
+const summaryItemStyle: React.CSSProperties = {
+  fontSize: '0.85rem',
+  color: '#4a5568',
+  padding: '0.2rem 0',
 };

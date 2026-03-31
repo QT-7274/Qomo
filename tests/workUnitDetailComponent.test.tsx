@@ -319,4 +319,58 @@ describe('WorkUnitDetailComponent', () => {
       expect(updated!.constraints[1].name).toBe('A');
     });
   });
+
+  describe('待补齐声明 UI', () => {
+    it('Slot 无 fillIn 时不显示待补齐标签', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      await StorageService.addSlot(wu.id, { name: '普通Slot', slotType: 'context', required: false });
+      renderDetail(wu.id);
+
+      await waitFor(() => {
+        expect(screen.getByText('普通Slot')).toBeTruthy();
+      });
+      expect(screen.queryByText('待补齐')).toBeNull();
+    });
+
+    it('Slot 有 fillIn 时显示待补齐标签和方式', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      await StorageService.addSlot(wu.id, { name: '目标Slot', slotType: 'context', required: true });
+      const after = await StorageService.getWorkUnit(wu.id);
+      await StorageService.setSlotFillIn(wu.id, after!.slots[0].id, { method: 'user-confirm', hint: '请输入目标' });
+      renderDetail(wu.id);
+
+      await waitFor(() => {
+        expect(screen.getByText('目标Slot')).toBeTruthy();
+      });
+      expect(screen.getByText('待补齐')).toBeTruthy();
+      expect(screen.getByText('user-confirm')).toBeTruthy();
+    });
+
+    it('待补齐摘要区域显示正确统计', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      await StorageService.addSlot(wu.id, { name: 'Slot1', slotType: 'context', required: true });
+      await StorageService.addSlot(wu.id, { name: 'Slot2', slotType: 'rule', required: false });
+      await StorageService.addSlot(wu.id, { name: 'Slot3', slotType: 'output', required: false });
+      const after = await StorageService.getWorkUnit(wu.id);
+      await StorageService.setSlotFillIn(wu.id, after!.slots[0].id, { method: 'auto' });
+      await StorageService.setSlotFillIn(wu.id, after!.slots[1].id, { method: 'user-confirm' });
+      renderDetail(wu.id);
+
+      await waitFor(() => {
+        expect(screen.getByText(/待补齐项/)).toBeTruthy();
+      });
+      expect(screen.getByText(/待补齐项 \(2\)/)).toBeTruthy();
+    });
+
+    it('无待补齐项时不显示摘要区域', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      await StorageService.addSlot(wu.id, { name: 'Slot1', slotType: 'context', required: false });
+      renderDetail(wu.id);
+
+      await waitFor(() => {
+        expect(screen.getByText('Slot1')).toBeTruthy();
+      });
+      expect(screen.queryByText(/待补齐项/)).toBeNull();
+    });
+  });
 });
