@@ -1,0 +1,1 @@
+export { WorkUnitDetailComponent } from './WorkUnitDetailComponent';

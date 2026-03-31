@@ -43,14 +43,14 @@ story_location: 'docs/implementation-artifacts'
 last_updated: '2026-03-31'
 
 development_status:
-  epic-b0: in-progress
+  epic-b0: done
   b0-1-unified-object-identity-version-lineage-references: done
   b0-2-unified-decision-writeback-observation-vocabulary: done
-  epic-b0-retrospective: optional
+  epic-b0-retrospective: done
 
-  epic-1: backlog
-  w1-continue-governance-entry: backlog
-  w2a-work-unit-core-structure-declaration: backlog
+  epic-1: in-progress
+  w1-continue-governance-entry: review
+  w2a-work-unit-core-structure-declaration: ready-for-dev
   w2b-constraint-and-output-semantics-declaration: backlog
   w2c-runtime-fill-ins-semantics-declaration: backlog
   w3-handoff-readiness-preview: backlog

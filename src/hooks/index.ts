@@ -1,1 +1,2 @@
-// Custom hooks live in this folder (e.g., useAuth, useDebounce)
+export { useWorkUnits } from './useWorkUnits';
+export type { UseWorkUnitsReturn } from './useWorkUnits';
