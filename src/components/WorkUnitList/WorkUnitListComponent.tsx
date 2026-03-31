@@ -56,6 +56,7 @@ export function WorkUnitListComponent() {
     setSortBy,
     createWorkUnit,
     deleteWorkUnit,
+    cloneWorkUnit,
   } = useWorkUnits();
 
   const navigate = useNavigate();
@@ -68,6 +69,10 @@ export function WorkUnitListComponent() {
     await createWorkUnit(trimmed);
     setNewName('');
     setCreating(false);
+  };
+
+  const handleClone = async (id: string) => {
+    await cloneWorkUnit(id);
   };
 
   const handleDelete = async (id: string, name: string) => {
@@ -170,6 +175,14 @@ export function WorkUnitListComponent() {
                   {formatRelativeTime(wu.updatedAt)}
                 </span>
               </div>
+              <button
+                type="button"
+                style={cloneListBtnStyle}
+                onClick={() => handleClone(wu.id)}
+                aria-label={`复制 ${wu.name}`}
+              >
+                ⧉
+              </button>
               <button
                 type="button"
                 style={deleteBtnStyle}
@@ -312,6 +325,15 @@ const sourceTagStyle: React.CSSProperties = {
   borderRadius: '4px',
   fontSize: '0.75rem',
   color: '#718096',
+};
+
+const cloneListBtnStyle: React.CSSProperties = {
+  padding: '0.25rem 0.5rem',
+  background: 'transparent',
+  border: 'none',
+  color: '#a0aec0',
+  cursor: 'pointer',
+  fontSize: '1rem',
 };
 
 const deleteBtnStyle: React.CSSProperties = {

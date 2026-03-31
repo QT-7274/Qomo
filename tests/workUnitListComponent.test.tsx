@@ -127,6 +127,21 @@ describe('WorkUnitListComponent', () => {
     expect(screen.getByText('克隆')).toBeTruthy();
   });
 
+  it('复制 Work Unit', async () => {
+    await StorageService.createWorkUnit('待复制');
+
+    renderWithRouter();
+    await waitFor(() => {
+      expect(screen.getByText('待复制')).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByLabelText('复制 待复制'));
+
+    await waitFor(() => {
+      expect(screen.getByText('待复制（副本）')).toBeTruthy();
+    });
+  });
+
   it('排序切换可用', async () => {
     await StorageService.createWorkUnit('测试项');
 

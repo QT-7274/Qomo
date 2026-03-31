@@ -27,6 +27,8 @@ export interface UseWorkUnitsReturn {
   createWorkUnit: (name: string) => Promise<WorkUnitRecord>;
   /** 删除 Work Unit */
   deleteWorkUnit: (id: string) => Promise<void>;
+  /** 复制 Work Unit */
+  cloneWorkUnit: (id: string) => Promise<WorkUnitRecord>;
   /** 手动刷新列表 */
   refresh: () => Promise<void>;
 }
@@ -82,6 +84,15 @@ export function useWorkUnits(): UseWorkUnitsReturn {
     [fetchWorkUnits],
   );
 
+  const cloneWorkUnit = useCallback(
+    async (id: string): Promise<WorkUnitRecord> => {
+      const cloned = await StorageService.cloneWorkUnit(id);
+      await fetchWorkUnits();
+      return cloned;
+    },
+    [fetchWorkUnits],
+  );
+
   return {
     workUnits,
     loading,
@@ -92,6 +103,7 @@ export function useWorkUnits(): UseWorkUnitsReturn {
     setSortBy,
     createWorkUnit,
     deleteWorkUnit,
+    cloneWorkUnit,
     refresh: fetchWorkUnits,
   };
 }
