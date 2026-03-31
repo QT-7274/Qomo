@@ -40,12 +40,12 @@ project_key: 'qomo'
 tracking_system: 'file-system'
 story_location: 'docs/implementation-artifacts'
 
-last_updated: '2026-03-30'
+last_updated: '2026-03-31'
 
 development_status:
   epic-b0: in-progress
   b0-1-unified-object-identity-version-lineage-references: done
-  b0-2-unified-decision-writeback-observation-vocabulary: backlog
+  b0-2-unified-decision-writeback-observation-vocabulary: done
   epic-b0-retrospective: optional
 
   epic-1: backlog
