@@ -351,4 +351,74 @@ describe('StorageService', () => {
       expect(reordered[2].order).toBe(2);
     });
   });
+
+  describe('cloneWorkUnit', () => {
+    it('创建含相同结构的副本', async () => {
+      const original = await StorageService.createWorkUnit('原始');
+      await StorageService.updateWorkUnitInfo(original.id, { description: '原始描述' });
+      await StorageService.addSlot(original.id, {
+        name: '上下文',
+        slotType: 'context',
+        required: true,
+      });
+
+      const origWu = await StorageService.getWorkUnit(original.id);
+      const slotId = origWu!.slots[0].id;
+      await StorageService.addCapability(original.id, slotId, {
+        name: '能力A',
+        content: '内容A',
+      });
+
+      const clone = await StorageService.cloneWorkUnit(original.id);
+
+      expect(clone.id).not.toBe(original.id);
+      expect(clone.name).toBe('原始（副本）');
+      expect(clone.description).toBe('原始描述');
+      expect(clone.sourceType).toBe('cloned_from');
+      expect(clone.slots).toHaveLength(1);
+      expect(clone.slots[0].name).toBe('上下文');
+      expect(clone.slots[0].capabilities).toHaveLength(1);
+      expect(clone.slots[0].capabilities[0].name).toBe('能力A');
+    });
+
+    it('副本的 Slot/Capability ID 与原始不同', async () => {
+      const original = await StorageService.createWorkUnit('原始');
+      await StorageService.addSlot(original.id, {
+        name: '规则',
+        slotType: 'rule',
+        required: false,
+      });
+
+      const origWu = await StorageService.getWorkUnit(original.id);
+      const slotId = origWu!.slots[0].id;
+      await StorageService.addCapability(original.id, slotId, {
+        name: 'C',
+        content: '内容',
+      });
+
+      // Re-fetch after adding capability
+      const origAfterCap = await StorageService.getWorkUnit(original.id);
+      const clone = await StorageService.cloneWorkUnit(original.id);
+
+      expect(clone.slots[0].id).not.toBe(origAfterCap!.slots[0].id);
+      expect(clone.slots[0].capabilities[0].id).not.toBe(
+        origAfterCap!.slots[0].capabilities[0].id,
+      );
+    });
+
+    it('副本在列表中可查到', async () => {
+      const original = await StorageService.createWorkUnit('待复制');
+      await StorageService.cloneWorkUnit(original.id);
+
+      const list = await StorageService.listWorkUnits();
+      expect(list).toHaveLength(2);
+      expect(list.some((wu) => wu.name === '待复制（副本）')).toBe(true);
+    });
+
+    it('克隆不存在的 Work Unit 抛错', async () => {
+      await expect(
+        StorageService.cloneWorkUnit('nonexistent'),
+      ).rejects.toThrow('Work Unit nonexistent 不存在');
+    });
+  });
 });

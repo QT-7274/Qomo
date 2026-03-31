@@ -383,6 +383,45 @@ async function reorderCapabilities(
 }
 
 // ---------------------------------------------------------------------------
+// Clone
+// ---------------------------------------------------------------------------
+
+/** 复制 Work Unit（深拷贝结构，新 ID，sourceType 设为 cloned_from） */
+async function cloneWorkUnit(sourceId: string): Promise<WorkUnitRecord> {
+  const now = nowISO();
+  let cloned: WorkUnitRecord | undefined;
+
+  await db.transaction('rw', db.workUnits, async () => {
+    const source = await db.workUnits.get(sourceId);
+    if (!source) throw new Error(`Work Unit ${sourceId} 不存在`);
+
+    // 深拷贝 Slots，为每个 Slot 和 Capability 分配新 ID
+    const clonedSlots: Slot[] = source.slots.map((slot) => ({
+      ...slot,
+      id: generateId(),
+      capabilities: slot.capabilities.map((cap) => ({
+        ...cap,
+        id: generateId(),
+      })),
+    }));
+
+    cloned = {
+      id: generateId(),
+      name: `${source.name}（副本）`,
+      description: source.description,
+      sourceType: 'cloned_from',
+      slots: clonedSlots,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await db.workUnits.add(cloned);
+  });
+
+  return cloned!;
+}
+
+// ---------------------------------------------------------------------------
 // 导出
 // ---------------------------------------------------------------------------
 
@@ -400,6 +439,7 @@ export const StorageService = {
   updateCapability,
   deleteCapability,
   reorderCapabilities,
+  cloneWorkUnit,
   /** 暴露 db 实例用于测试 reset */
   _db: db,
 };
