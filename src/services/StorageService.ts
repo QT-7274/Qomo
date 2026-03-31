@@ -20,6 +20,16 @@ import type { FillInDeclaration } from '../types/fillIn.types';
 // Work Unit 持久化记录（IndexedDB 表结构）
 // ---------------------------------------------------------------------------
 
+/** 版本快照记录 */
+export interface WorkUnitVersionRecord {
+  id: string;
+  workUnitId: string;
+  versionNumber: number;
+  contentHash: string;
+  content: string;
+  createdAt: ISO8601;
+}
+
 /** IndexedDB 中 Work Unit 的存储结构 */
 export interface WorkUnitRecord {
   /** 稳定的逻辑主键（UUID） */
@@ -46,6 +56,7 @@ export interface WorkUnitRecord {
 
 class QomoDatabase extends Dexie {
   workUnits!: EntityTable<WorkUnitRecord, 'id'>;
+  workUnitVersions!: EntityTable<WorkUnitVersionRecord, 'id'>;
 
   constructor() {
     super('qomo');
@@ -78,6 +89,10 @@ class QomoDatabase extends Dexie {
     });
     // No data migration needed: fillIn is an optional field inside nested Slot JSON.
     // Existing Slots naturally have fillIn === undefined.
+    this.version(5).stores({
+      workUnits: 'id, name, sourceType, createdAt, updatedAt',
+      workUnitVersions: 'id, workUnitId, createdAt',
+    });
   }
 }
 
@@ -111,6 +126,16 @@ function generateId(): string {
 
 function nowISO(): ISO8601 {
   return new Date().toISOString();
+}
+
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash |= 0;
+  }
+  return 'h_' + Math.abs(hash).toString(36);
 }
 
 /** 获取所有 Work Unit（支持排序） */
@@ -726,6 +751,82 @@ async function cloneWorkUnit(sourceId: string): Promise<WorkUnitRecord> {
 }
 
 // ---------------------------------------------------------------------------
+// Version Snapshots
+// ---------------------------------------------------------------------------
+
+const MAX_SNAPSHOTS = 5;
+
+async function createSnapshot(workUnitId: string): Promise<WorkUnitVersionRecord> {
+  let record: WorkUnitVersionRecord | undefined;
+
+  await db.transaction('rw', [db.workUnits, db.workUnitVersions], async () => {
+    const wu = await db.workUnits.get(workUnitId);
+    if (!wu) throw new Error(`Work Unit ${workUnitId} 不存在`);
+
+    const contentObj = {
+      name: wu.name,
+      description: wu.description,
+      slots: wu.slots,
+      constraints: wu.constraints,
+    };
+    const content = JSON.stringify(contentObj);
+    const contentHash = simpleHash(content);
+
+    const existing = await db.workUnitVersions
+      .where('workUnitId').equals(workUnitId)
+      .sortBy('createdAt');
+    const maxVersion = existing.length > 0
+      ? Math.max(...existing.map((s) => s.versionNumber))
+      : 0;
+
+    record = {
+      id: generateId(),
+      workUnitId,
+      versionNumber: maxVersion + 1,
+      contentHash,
+      content,
+      createdAt: nowISO(),
+    };
+
+    await db.workUnitVersions.add(record);
+
+    if (existing.length >= MAX_SNAPSHOTS) {
+      const toDelete = existing.slice(0, existing.length - MAX_SNAPSHOTS + 1);
+      await db.workUnitVersions.bulkDelete(toDelete.map((s) => s.id));
+    }
+  });
+
+  return record!;
+}
+
+async function listSnapshots(workUnitId: string): Promise<WorkUnitVersionRecord[]> {
+  const list = await db.workUnitVersions
+    .where('workUnitId').equals(workUnitId)
+    .sortBy('createdAt');
+  return list.reverse();
+}
+
+async function restoreSnapshot(workUnitId: string, snapshotId: string): Promise<void> {
+  await db.transaction('rw', [db.workUnits, db.workUnitVersions], async () => {
+    const wu = await db.workUnits.get(workUnitId);
+    if (!wu) throw new Error(`Work Unit ${workUnitId} 不存在`);
+
+    const snapshot = await db.workUnitVersions.get(snapshotId);
+    if (!snapshot) throw new Error(`快照 ${snapshotId} 不存在`);
+
+    const parsed = JSON.parse(snapshot.content);
+
+    await db.workUnits.update(workUnitId, {
+      name: parsed.name,
+      description: parsed.description,
+      slots: parsed.slots,
+      constraints: parsed.constraints,
+      updatedAt: nowISO(),
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
 // 导出
 // ---------------------------------------------------------------------------
 
@@ -754,6 +855,9 @@ export const StorageService = {
   setSlotFillIn,
   clearSlotFillIn,
   cloneWorkUnit,
+  createSnapshot,
+  listSnapshots,
+  restoreSnapshot,
   /** 暴露 db 实例用于测试 reset */
   _db: db,
 };

@@ -12,6 +12,7 @@ describe('StorageService', () => {
   beforeEach(async () => {
     // 清空数据库
     await StorageService._db.workUnits.clear();
+    await StorageService._db.workUnitVersions.clear();
   });
 
   describe('createWorkUnit', () => {
@@ -765,6 +766,119 @@ describe('StorageService', () => {
       expect(cloned.slots[0].fillIn!.method).toBe('user-confirm');
       expect(cloned.slots[0].fillIn!.hint).toBe('描述任务');
       expect(cloned.slots[0].id).not.toBe(slotId);
+    });
+  });
+
+  describe('createSnapshot', () => {
+    it('创建快照并返回版本记录', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      await StorageService.addSlot(wu.id, { name: '目标', slotType: 'context', required: true });
+      const after = await StorageService.getWorkUnit(wu.id);
+      await StorageService.addCapability(wu.id, after!.slots[0].id, { name: 'C', content: '内容' });
+
+      const snapshot = await StorageService.createSnapshot(wu.id);
+
+      expect(snapshot.id).toBeTruthy();
+      expect(snapshot.workUnitId).toBe(wu.id);
+      expect(snapshot.versionNumber).toBe(1);
+      expect(snapshot.contentHash).toBeTruthy();
+      expect(snapshot.createdAt).toBeTruthy();
+      const parsed = JSON.parse(snapshot.content);
+      expect(parsed.name).toBe('测试');
+      expect(parsed.slots).toHaveLength(1);
+    });
+
+    it('版本号自增', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      const s1 = await StorageService.createSnapshot(wu.id);
+      const s2 = await StorageService.createSnapshot(wu.id);
+      expect(s1.versionNumber).toBe(1);
+      expect(s2.versionNumber).toBe(2);
+    });
+
+    it('超过 5 个快照自动清理最旧', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      for (let i = 0; i < 6; i++) {
+        await StorageService.createSnapshot(wu.id);
+      }
+      const list = await StorageService.listSnapshots(wu.id);
+      expect(list).toHaveLength(5);
+      expect(list.every((s) => s.versionNumber >= 2)).toBe(true);
+    });
+
+    it('相同内容生成相同哈希', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      const s1 = await StorageService.createSnapshot(wu.id);
+      const s2 = await StorageService.createSnapshot(wu.id);
+      expect(s1.contentHash).toBe(s2.contentHash);
+    });
+
+    it('不同内容生成不同哈希', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      const s1 = await StorageService.createSnapshot(wu.id);
+      await StorageService.updateWorkUnitInfo(wu.id, { name: '已修改' });
+      const s2 = await StorageService.createSnapshot(wu.id);
+      expect(s1.contentHash).not.toBe(s2.contentHash);
+    });
+
+    it('Work Unit 不存在时抛错', async () => {
+      await expect(StorageService.createSnapshot('nonexistent')).rejects.toThrow('不存在');
+    });
+  });
+
+  describe('listSnapshots', () => {
+    it('按时间倒序返回', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      await StorageService.createSnapshot(wu.id);
+      await new Promise((r) => setTimeout(r, 10));
+      await StorageService.createSnapshot(wu.id);
+
+      const list = await StorageService.listSnapshots(wu.id);
+      expect(list).toHaveLength(2);
+      expect(list[0].versionNumber).toBe(2);
+      expect(list[1].versionNumber).toBe(1);
+    });
+
+    it('无快照返回空数组', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      const list = await StorageService.listSnapshots(wu.id);
+      expect(list).toEqual([]);
+    });
+  });
+
+  describe('restoreSnapshot', () => {
+    it('恢复快照覆盖当前内容', async () => {
+      const wu = await StorageService.createWorkUnit('原始');
+      await StorageService.addSlot(wu.id, { name: '原始Slot', slotType: 'context', required: true });
+      await StorageService.createSnapshot(wu.id);
+
+      await StorageService.updateWorkUnitInfo(wu.id, { name: '已修改', description: '新描述' });
+
+      const list = await StorageService.listSnapshots(wu.id);
+      await StorageService.restoreSnapshot(wu.id, list[0].id);
+
+      const restored = await StorageService.getWorkUnit(wu.id);
+      expect(restored!.name).toBe('原始');
+      expect(restored!.slots).toHaveLength(1);
+      expect(restored!.slots[0].name).toBe('原始Slot');
+    });
+
+    it('恢复后 updatedAt 刷新', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      await StorageService.createSnapshot(wu.id);
+      const before = await StorageService.getWorkUnit(wu.id);
+
+      await new Promise((r) => setTimeout(r, 10));
+      const list = await StorageService.listSnapshots(wu.id);
+      await StorageService.restoreSnapshot(wu.id, list[0].id);
+
+      const after = await StorageService.getWorkUnit(wu.id);
+      expect(after!.updatedAt > before!.updatedAt).toBe(true);
+    });
+
+    it('快照不存在时抛错', async () => {
+      const wu = await StorageService.createWorkUnit('测试');
+      await expect(StorageService.restoreSnapshot(wu.id, 'nonexistent')).rejects.toThrow('不存在');
     });
   });
 });
