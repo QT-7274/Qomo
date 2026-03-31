@@ -10,6 +10,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { StorageService, type WorkUnitRecord } from '../services/StorageService';
 import type { SlotType } from '../types/slot.types';
 import type { ConstraintType, OutputFormatType, LengthLimit } from '../types/constraint.types';
+import type { FillInDeclaration } from '../types/fillIn.types';
 
 export interface UseWorkUnitEditorReturn {
   /** 当前 Work Unit 数据 */
@@ -82,6 +83,10 @@ export interface UseWorkUnitEditorReturn {
   deleteChecklistItem: (constraintId: string, itemId: string) => Promise<void>;
   /** 重排检查项 */
   reorderChecklistItems: (constraintId: string, orderedIds: string[]) => Promise<void>;
+  /** 为 Slot 设置待补齐声明 */
+  setSlotFillIn: (slotId: string, fillIn: FillInDeclaration) => Promise<void>;
+  /** 清除 Slot 的待补齐声明 */
+  clearSlotFillIn: (slotId: string) => Promise<void>;
 }
 
 export function useWorkUnitEditor(id: string | undefined): UseWorkUnitEditorReturn {
@@ -242,6 +247,18 @@ export function useWorkUnitEditor(id: string | undefined): UseWorkUnitEditorRetu
     await fetchWorkUnit();
   }, [id, fetchWorkUnit]);
 
+  const setSlotFillIn = useCallback(async (slotId: string, fillIn: FillInDeclaration) => {
+    if (!id) return;
+    await StorageService.setSlotFillIn(id, slotId, fillIn);
+    await fetchWorkUnit();
+  }, [id, fetchWorkUnit]);
+
+  const clearSlotFillIn = useCallback(async (slotId: string) => {
+    if (!id) return;
+    await StorageService.clearSlotFillIn(id, slotId);
+    await fetchWorkUnit();
+  }, [id, fetchWorkUnit]);
+
   return {
     workUnit,
     loading,
@@ -264,5 +281,7 @@ export function useWorkUnitEditor(id: string | undefined): UseWorkUnitEditorRetu
     updateChecklistItem,
     deleteChecklistItem,
     reorderChecklistItems,
+    setSlotFillIn,
+    clearSlotFillIn,
   };
 }
