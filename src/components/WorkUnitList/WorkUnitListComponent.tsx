@@ -6,40 +6,10 @@
  */
 
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useWorkUnits } from '../../hooks/useWorkUnits';
 import type { SortField } from '../../services/StorageService';
-
-// ---------------------------------------------------------------------------
-// 辅助：相对时间格式化
-// ---------------------------------------------------------------------------
-
-function formatRelativeTime(isoDate: string): string {
-  const date = new Date(isoDate);
-  if (isNaN(date.getTime())) return isoDate;
-
-  const now = Date.now();
-  const diffMs = now - date.getTime();
-  const diffMin = Math.floor(diffMs / 60_000);
-  const diffHr = Math.floor(diffMs / 3_600_000);
-  const diffDay = Math.floor(diffMs / 86_400_000);
-
-  if (diffMin < 1) return '刚刚';
-  if (diffMin < 60) return `${diffMin} 分钟前`;
-  if (diffHr < 24) return `${diffHr} 小时前`;
-  if (diffDay < 30) return `${diffDay} 天前`;
-  return date.toLocaleDateString('zh-CN');
-}
-
-/** 来源类型的中文标签 */
-function sourceTypeLabel(sourceType: string): string {
-  switch (sourceType) {
-    case 'created_new': return '全新';
-    case 'cloned_from': return '克隆';
-    case 'restored_from': return '恢复';
-    default: return sourceType;
-  }
-}
+import { formatRelativeTime, sourceTypeLabel } from '../../utils/formatUtil';
 
 // ---------------------------------------------------------------------------
 // Component
@@ -97,9 +67,12 @@ export function WorkUnitListComponent() {
     <div style={pageStyle}>
       <header style={headerStyle}>
         <h1 style={titleStyle}>Work Units</h1>
-        <button type="button" style={primaryBtnStyle} onClick={() => setCreating(true)}>
-          + 新建
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <Link to="/launch" style={launchLinkStyle}>🚀 启动台</Link>
+          <button type="button" style={primaryBtnStyle} onClick={() => setCreating(true)}>
+            + 新建
+          </button>
+        </div>
       </header>
 
       {/* 创建表单 */}
@@ -349,4 +322,15 @@ const emptyStateStyle: React.CSSProperties = {
   textAlign: 'center',
   padding: '3rem 1rem',
   color: '#4a5568',
+};
+
+const launchLinkStyle: React.CSSProperties = {
+  padding: '0.5rem 1rem',
+  background: '#48bb78',
+  color: '#fff',
+  border: 'none',
+  borderRadius: '6px',
+  fontSize: '0.9rem',
+  fontWeight: 500,
+  textDecoration: 'none',
 };

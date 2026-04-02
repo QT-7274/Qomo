@@ -40,7 +40,7 @@ project_key: 'qomo'
 tracking_system: 'file-system'
 story_location: 'docs/implementation-artifacts'
 
-last_updated: '2026-03-31'
+last_updated: '2026-04-02'
 
 
 development_status:
@@ -49,7 +49,7 @@ development_status:
   b0-2-unified-decision-writeback-observation-vocabulary: done
   epic-b0-retrospective: done
 
-  epic-1: in-progress
+  epic-1: done
   w1-continue-governance-entry: done
   w2a-work-unit-core-structure-declaration: done
   w2b-constraint-and-output-semantics-declaration: done
@@ -58,8 +58,8 @@ development_status:
   w4-versioned-snapshot-and-editing-continuity: done
   epic-1-retrospective: optional
 
-  epic-2: backlog
-  v1-launch-entry-and-object-selection: backlog
+  epic-2: in-progress
+  v1-launch-entry-and-object-selection: done
   v2-runtime-context-completion: backlog
   v3a-capability-availability-overview: backlog
   v3b-blocking-issue-explanation: backlog

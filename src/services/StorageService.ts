@@ -15,6 +15,7 @@ import type { Slot } from '../types/slot.types';
 import type { Capability } from '../types/capability.types';
 import type { ConstraintPack } from '../types/constraint.types';
 import type { FillInDeclaration } from '../types/fillIn.types';
+import type { RecentLaunchRecord } from '../types/launch.types';
 
 // ---------------------------------------------------------------------------
 // Work Unit 持久化记录（IndexedDB 表结构）
@@ -57,6 +58,7 @@ export interface WorkUnitRecord {
 class QomoDatabase extends Dexie {
   workUnits!: EntityTable<WorkUnitRecord, 'id'>;
   workUnitVersions!: EntityTable<WorkUnitVersionRecord, 'id'>;
+  recentLaunches!: EntityTable<RecentLaunchRecord, 'id'>;
 
   constructor() {
     super('qomo');
@@ -92,6 +94,11 @@ class QomoDatabase extends Dexie {
     this.version(5).stores({
       workUnits: 'id, name, sourceType, createdAt, updatedAt',
       workUnitVersions: 'id, workUnitId, createdAt',
+    });
+    this.version(6).stores({
+      workUnits: 'id, name, sourceType, createdAt, updatedAt',
+      workUnitVersions: 'id, workUnitId, createdAt',
+      recentLaunches: 'id, workUnitId, lastLaunchedAt',
     });
   }
 }
@@ -179,10 +186,11 @@ async function createWorkUnit(
   return record;
 }
 
-/** 删除 Work Unit */
+/** 删除 Work Unit（级联清理 recentLaunches） */
 async function deleteWorkUnit(id: string): Promise<void> {
-  await db.transaction('rw', db.workUnits, async () => {
+  await db.transaction('rw', [db.workUnits, db.recentLaunches], async () => {
     await db.workUnits.delete(id);
+    await db.recentLaunches.delete(id);
   });
 }
 
@@ -832,6 +840,51 @@ async function restoreSnapshot(workUnitId: string, snapshotId: string): Promise<
 }
 
 // ---------------------------------------------------------------------------
+// Recent Launches (V1)
+// ---------------------------------------------------------------------------
+
+const MAX_RECENT_LAUNCHES = 10;
+
+/** 记录/更新最近使用（upsert by workUnitId） */
+async function recordRecentLaunch(workUnitId: string, workUnitName: string): Promise<void> {
+  await db.transaction('rw', db.recentLaunches, async () => {
+    const existing = await db.recentLaunches.get(workUnitId);
+    if (existing) {
+      await db.recentLaunches.update(workUnitId, {
+        workUnitName,
+        lastLaunchedAt: nowISO(),
+      });
+    } else {
+      await db.recentLaunches.add({
+        id: workUnitId,
+        workUnitId,
+        workUnitName,
+        lastLaunchedAt: nowISO(),
+      });
+    }
+
+    // 超出上限时删除最旧的
+    const all = await db.recentLaunches.orderBy('lastLaunchedAt').toArray();
+    if (all.length > MAX_RECENT_LAUNCHES) {
+      const toDelete = all.slice(0, all.length - MAX_RECENT_LAUNCHES);
+      await db.recentLaunches.bulkDelete(toDelete.map((r) => r.id));
+    }
+  });
+}
+
+/** 获取最近使用记录（按 lastLaunchedAt 倒序） */
+async function listRecentLaunches(limit?: number): Promise<RecentLaunchRecord[]> {
+  const list = await db.recentLaunches.orderBy('lastLaunchedAt').reverse().toArray();
+  return limit ? list.slice(0, limit) : list;
+}
+
+/** 获取 Work Unit 的最新快照（无快照返回 undefined） */
+async function getLatestSnapshot(workUnitId: string): Promise<WorkUnitVersionRecord | undefined> {
+  const snapshots = await listSnapshots(workUnitId);
+  return snapshots.length > 0 ? snapshots[0] : undefined;
+}
+
+// ---------------------------------------------------------------------------
 // 导出
 // ---------------------------------------------------------------------------
 
@@ -863,6 +916,9 @@ export const StorageService = {
   createSnapshot,
   listSnapshots,
   restoreSnapshot,
+  recordRecentLaunch,
+  listRecentLaunches,
+  getLatestSnapshot,
   /** 暴露 db 实例用于测试 reset */
   _db: db,
 };

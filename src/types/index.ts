@@ -61,3 +61,9 @@ export type {
   FillInMethod,
   FillInDeclaration,
 } from './fillIn.types';
+
+export type {
+  LaunchSessionStatus,
+  LaunchSession,
+  RecentLaunchRecord,
+} from './launch.types';
