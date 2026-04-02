@@ -63,7 +63,7 @@ development_status:
   epic-2: in-progress
   v1-launch-entry-and-object-selection: done
   v2-runtime-context-completion: done
-  v3a-capability-availability-overview: backlog
+  v3a-capability-availability-overview: done
   v3b-blocking-issue-explanation: backlog
   v3c-ambiguous-candidate-explanation: backlog
   v4-user-decision-and-degradation-paths: backlog

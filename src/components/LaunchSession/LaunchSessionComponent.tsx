@@ -10,7 +10,9 @@
 import { useParams, Link } from 'react-router-dom';
 import { useLaunchSession } from '../../hooks/useLaunchSession';
 import { useLaunchContext } from '../../hooks/useLaunchContext';
+import { useCapabilityAvailability } from '../../hooks/useCapabilityAvailability';
 import { ContextCompletionSection } from './ContextCompletionSection';
+import { CapabilityOverviewSection } from './CapabilityOverviewSection';
 
 const slotTypeLabels: Record<string, string> = {
   context: '上下文', rule: '规则', output: '输出', capability: '能力', custom: '自定义',
@@ -33,6 +35,7 @@ export function LaunchSessionComponent() {
     id ?? '',
     data?.snapshotId,
   );
+  const availability = useCapabilityAvailability(data?.slots ?? []);
 
   if (loading) {
     return <div style={pageStyle}><p>加载中…</p></div>;
@@ -106,6 +109,9 @@ export function LaunchSessionComponent() {
 
       {/* V2: 现场补齐上下文 */}
       <ContextCompletionSection ctx={ctx} />
+
+      {/* V3a: 能力可用性总览 */}
+      <CapabilityOverviewSection availability={availability} />
     </div>
   );
 }

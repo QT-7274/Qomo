@@ -37,3 +37,8 @@ export {
   computeCompleteness,
   getMissingRequiredItems,
 } from './contextEnvelopeUtil';
+
+export {
+  assessCapabilityAvailability,
+  summarizeAvailability,
+} from './capabilityAvailabilityUtil';

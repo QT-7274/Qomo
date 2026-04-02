@@ -71,3 +71,9 @@ export type {
   FillInItem,
   LaunchContextEnvelope,
 } from './launch.types';
+
+export type {
+  AvailabilityStatus,
+  CapabilityAvailabilityItem,
+  AvailabilitySummary,
+} from './capabilityAvailability.types';

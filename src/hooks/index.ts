@@ -8,3 +8,5 @@ export { useLaunchSession } from './useLaunchSession';
 export type { UseLaunchSessionReturn, LaunchSessionData } from './useLaunchSession';
 export { useLaunchContext } from './useLaunchContext';
 export type { UseLaunchContextReturn } from './useLaunchContext';
+export { useCapabilityAvailability } from './useCapabilityAvailability';
+export type { UseCapabilityAvailabilityReturn } from './useCapabilityAvailability';
