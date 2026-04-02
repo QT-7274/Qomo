@@ -30,3 +30,10 @@ export {
 } from './promptGeneratorUtil';
 
 export type { HandoffStatus } from './promptGeneratorUtil';
+
+export {
+  extractFillInItems,
+  computeSlotFillStatus,
+  computeCompleteness,
+  getMissingRequiredItems,
+} from './contextEnvelopeUtil';

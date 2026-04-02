@@ -1,14 +1,16 @@
 /**
- * LaunchSessionComponent — 启动会话骨架（V1）
+ * LaunchSessionComponent — 启动会话（V1 + V2）
  *
  * V1 Story: 展示选中 Work Unit 的结构摘要。
- * 后续 V2 将在此补齐上下文。
+ * V2 Story: 现场补齐上下文（LaunchContextEnvelope）。
  *
- * 通过 useLaunchSession hook 加载数据，遵守分层架构。
+ * 通过 useLaunchSession + useLaunchContext hook 加载数据，遵守分层架构。
  */
 
 import { useParams, Link } from 'react-router-dom';
 import { useLaunchSession } from '../../hooks/useLaunchSession';
+import { useLaunchContext } from '../../hooks/useLaunchContext';
+import { ContextCompletionSection } from './ContextCompletionSection';
 
 const slotTypeLabels: Record<string, string> = {
   context: '上下文', rule: '规则', output: '输出', capability: '能力', custom: '自定义',
@@ -26,6 +28,11 @@ function handoffLabel(status: string): string {
 export function LaunchSessionComponent() {
   const { id } = useParams<{ id: string }>();
   const { data, loading, error } = useLaunchSession(id);
+  const ctx = useLaunchContext(
+    data?.slots ?? [],
+    id ?? '',
+    data?.snapshotId,
+  );
 
   if (loading) {
     return <div style={pageStyle}><p>加载中…</p></div>;
@@ -97,12 +104,8 @@ export function LaunchSessionComponent() {
         </p>
       </section>
 
-      {/* V2 占位 */}
-      <section style={placeholderStyle}>
-        <p style={{ color: '#718096', fontStyle: 'italic' }}>
-          💡 后续 V2 将在此补齐当前任务上下文（仓库、文件、任务目标等）
-        </p>
-      </section>
+      {/* V2: 现场补齐上下文 */}
+      <ContextCompletionSection ctx={ctx} />
     </div>
   );
 }
@@ -250,12 +253,4 @@ const constraintSummary: React.CSSProperties = {
   marginTop: '0.75rem',
   fontSize: '0.85rem',
   color: '#718096',
-};
-
-const placeholderStyle: React.CSSProperties = {
-  padding: '1.5rem',
-  background: '#f7fafc',
-  borderRadius: '8px',
-  border: '1px dashed #e2e8f0',
-  textAlign: 'center',
 };

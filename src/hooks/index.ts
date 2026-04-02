@@ -6,3 +6,5 @@ export { useLaunchPanel } from './useLaunchPanel';
 export type { UseLaunchPanelReturn, LaunchWorkUnitItem } from './useLaunchPanel';
 export { useLaunchSession } from './useLaunchSession';
 export type { UseLaunchSessionReturn, LaunchSessionData } from './useLaunchSession';
+export { useLaunchContext } from './useLaunchContext';
+export type { UseLaunchContextReturn } from './useLaunchContext';

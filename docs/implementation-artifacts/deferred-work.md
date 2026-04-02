@@ -10,3 +10,7 @@
 
 - **D1** `selectWorkUnit` 闭包捕获 stale `allWorkUnits`/`snapshotMap` — MVP 阶段单标签页使用可接受，后续需增加刷新机制或 optimistic refetch。
 - **D2** N+1 快照查询（fetchData 中每个 WU 独立调用 `getLatestSnapshot`）— MVP 规模 (<100 WU) 性能可接受，后续需改为批量查询。
+
+## Deferred from: code review of v2-runtime-context-completion (2026-04-02)
+
+- **D1** useLaunchContext 在 loading 时以空参数运行 — MVP 单页使用可接受，data 到达后 slots 变化触发重算。后续若性能敏感可延迟 hook 初始化。

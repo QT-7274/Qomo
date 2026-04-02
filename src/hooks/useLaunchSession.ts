@@ -12,6 +12,10 @@ import type { Slot } from '../types/slot.types';
 import type { ConstraintPack } from '../types/constraint.types';
 
 export interface LaunchSessionData {
+  /** Work Unit ID */
+  workUnitId: string;
+  /** 快照 ID（使用快照时） */
+  snapshotId?: string;
   /** 显示用名称（快照优先） */
   name: string;
   /** 显示用描述 */
@@ -100,6 +104,8 @@ export function useLaunchSession(id: string | undefined): UseLaunchSessionReturn
       };
 
       setData({
+        workUnitId: id,
+        snapshotId: snapshot?.id,
         name: displayName,
         description: displayDesc,
         slots: displaySlots,

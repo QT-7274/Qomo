@@ -66,4 +66,8 @@ export type {
   LaunchSessionStatus,
   LaunchSession,
   RecentLaunchRecord,
+  ContextCompleteness,
+  SlotFillStatus,
+  FillInItem,
+  LaunchContextEnvelope,
 } from './launch.types';

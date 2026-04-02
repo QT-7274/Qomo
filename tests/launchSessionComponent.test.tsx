@@ -109,12 +109,12 @@ describe('LaunchSessionComponent', () => {
     });
   });
 
-  it('显示 V2 占位提示', async () => {
-    const wu = await StorageService.createWorkUnit('V2 占位测试');
+  it('显示 V2 上下文补齐区域（替换 V1 占位）', async () => {
+    const wu = await StorageService.createWorkUnit('V2 补齐测试');
 
     renderSession(wu.id);
     await waitFor(() => {
-      expect(screen.getAllByText(/后续 V2/).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByRole('heading', { name: '现场补齐上下文' })).toBeTruthy();
     });
   });
 });
